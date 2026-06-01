@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "news-intel"
+version = "0.1.0"
+description = "Local news intelligence pipeline"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+  "feedparser>=6.0.11",
+  "PyYAML>=6.0.1",
+  "python-dateutil>=2.9.0.post0",
+  "requests>=2.32.3",
+  "urllib3<2",
+]
+
+[project.optional-dependencies]
+fundus = ["fundus>=0.5.0"]
+test = ["pytest>=8.2"]
+
+[project.scripts]
+news-intel = "news_pipeline.cli:main"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["news_pipeline*"]

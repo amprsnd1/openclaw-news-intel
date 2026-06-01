@@ -1,0 +1,2 @@
+-r requirements.txt
+fundus>=0.5.0

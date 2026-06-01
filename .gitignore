@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+
+# Virtual envs
+.venv/
+venv/
+
+# Local runtime state
+.pycache_local/
+data/*.sqlite
+data/*.sqlite-shm
+data/*.sqlite-wal
+
+# Env files
+.env
+.env.*
+!.env.example
+
+# Packaging artifacts
+*.egg-info/
+build/
+dist/
+
+# Local security-sensitive files
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa
+id_ed25519
+*.kdbx
+
+# Local agent/runtime state
+.openclaw/
+.claude/
+.codex/
+
+# Logs
+*.log

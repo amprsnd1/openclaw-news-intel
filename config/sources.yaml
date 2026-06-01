@@ -1,0 +1,120 @@
+sources:
+  - name: BBC
+    type: newspaper
+    adapter: rss
+    url: https://feeds.bbci.co.uk/news/world/rss.xml
+    language: en
+    region: global
+    country: UK
+    access_mode: rss
+    enabled: true
+
+  - name: The Guardian
+    type: newspaper
+    adapter: rss
+    url: https://www.theguardian.com/world/rss
+    language: en
+    region: global
+    country: UK
+    access_mode: rss
+    enabled: true
+
+  - name: Politico EU
+    type: newspaper
+    adapter: rss
+    url: https://www.politico.eu/feed/
+    language: en
+    region: eu
+    country: EU
+    access_mode: rss
+    enabled: true
+
+  - name: AP News
+    type: wire
+    adapter: rss
+    url: https://apnews.com/hub/apf-topnews?output=1
+    language: en
+    region: global
+    country: US
+    access_mode: public
+    enabled: false
+
+  - name: Der Spiegel
+    type: newspaper
+    adapter: rss
+    url: https://www.spiegel.de/international/index.rss
+    language: en
+    region: eu
+    country: DE
+    access_mode: rss
+    enabled: false
+
+  - name: Le Monde
+    type: newspaper
+    adapter: rss
+    url: https://www.lemonde.fr/en/rss/une.xml
+    language: en
+    region: eu
+    country: FR
+    access_mode: rss
+    enabled: false
+
+  - name: Reuters
+    type: wire
+    adapter: gdelt
+    url: metadata-only
+    language: en
+    region: global
+    country: US
+    country_code: us
+    domains: [reuters.com]
+    access_mode: metadata_only
+    gdelt_timeout_seconds: 15
+    gdelt_max_retries: 2
+    gdelt_retry_wait_seconds: 5
+    enabled: true
+
+  - name: Bloomberg
+    type: wire
+    adapter: gdelt
+    url: metadata-only
+    language: en
+    region: global
+    country: US
+    country_code: us
+    domains: [bloomberg.com]
+    access_mode: metadata_only
+    gdelt_timeout_seconds: 15
+    gdelt_max_retries: 2
+    gdelt_retry_wait_seconds: 5
+    enabled: true
+
+  - name: Financial Times
+    type: newspaper
+    adapter: gdelt
+    url: metadata-only
+    language: en
+    region: global
+    country: UK
+    country_code: uk
+    domains: [ft.com]
+    access_mode: metadata_only
+    gdelt_timeout_seconds: 15
+    gdelt_max_retries: 2
+    gdelt_retry_wait_seconds: 5
+    enabled: true
+
+  - name: Wall Street Journal
+    type: newspaper
+    adapter: gdelt
+    url: metadata-only
+    language: en
+    region: global
+    country: US
+    country_code: us
+    domains: [wsj.com]
+    access_mode: metadata_only
+    gdelt_timeout_seconds: 15
+    gdelt_max_retries: 2
+    gdelt_retry_wait_seconds: 5
+    enabled: true
