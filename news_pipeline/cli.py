@@ -5,12 +5,13 @@ from typing import Any, Dict, List, Tuple
 
 from .config import get_enabled_sources, load_sources, load_watchlists, resolve_db_path
 from .dedupe import dedupe_batch
-from .digest import render_items_markdown
+from .digest import render_search_results_markdown, render_watchlist_digest_markdown
 from .filters import apply_watchlists
 from .ingest.fundus_adapter import fetch_fundus, fundus_status
 from .ingest.gdelt import fetch_gdelt_metadata, gdelt_status
 from .ingest.rss import fetch_rss
 from .normalize import normalize_article, utc_now_iso
+from .relevance import classify_watchlist_article
 from .storage import Storage
 
 SUPPORTED_MODES = ("rss", "fundus", "gdelt", "all")
@@ -46,7 +47,23 @@ def _select_sources_by_mode(sources: List[Dict[str, Any]], mode: str) -> List[Di
     return [s for s in enabled if s.get("adapter", "rss") == mode]
 
 
-def _ingest_source(source_cfg: Dict[str, Any], max_items: int) -> Tuple[List[Dict[str, Any]], str | None]:
+def _find_watchlist(topic: str | None, watchlists: List[Dict[str, Any]]) -> Dict[str, Any] | None:
+    if not topic:
+        return None
+    topic_norm = topic.strip().lower()
+    for watchlist in watchlists:
+        name = (watchlist.get("name") or "").strip().lower()
+        topic_name = (watchlist.get("topic") or "").strip().lower()
+        if topic_norm in {name, topic_name}:
+            return watchlist
+    return None
+
+
+def _ingest_source(
+    source_cfg: Dict[str, Any],
+    max_items: int,
+    topic_watchlist: Dict[str, Any] | None = None,
+) -> Tuple[List[Dict[str, Any]], str | None]:
     adapter = source_cfg.get("adapter", "rss")
 
     if adapter == "rss":
@@ -59,7 +76,7 @@ def _ingest_source(source_cfg: Dict[str, Any], max_items: int) -> Tuple[List[Dic
         return fetch_fundus(source_cfg, max_items=max_items)
 
     if adapter == "gdelt":
-        return fetch_gdelt_metadata(source_cfg, max_items=max_items)
+        return fetch_gdelt_metadata(source_cfg, max_items=max_items, topic_watchlist=topic_watchlist)
 
     return [], f"Unknown adapter '{adapter}' for source {source_cfg.get('name', 'unknown')}"
 
@@ -67,6 +84,8 @@ def _ingest_source(source_cfg: Dict[str, Any], max_items: int) -> Tuple[List[Dic
 def cmd_ingest(args: argparse.Namespace) -> int:
     storage, all_sources, watchlists = _load_runtime()
     adapter_status = _adapter_statuses()
+    topic = getattr(args, "topic", None)
+    topic_watchlist = _find_watchlist(topic, watchlists)
 
     if args.mode == "fundus" and not adapter_status["fundus"]["available"]:
         print(f"ERROR: {adapter_status['fundus']['message']}")
@@ -83,10 +102,14 @@ def cmd_ingest(args: argparse.Namespace) -> int:
     skipped = 0
     matched = 0
     warnings: List[str] = []
+    if topic and topic_watchlist is None:
+        warnings.append(f"Watchlist topic '{topic}' not found. Proceeding without targeted topic ingestion.")
 
     try:
         for source_cfg in selected_sources:
-            raw_items, warning = _ingest_source(source_cfg, max_items=args.max_items)
+            adapter = source_cfg.get("adapter", "rss")
+            wl = topic_watchlist if adapter == "gdelt" else None
+            raw_items, warning = _ingest_source(source_cfg, max_items=args.max_items, topic_watchlist=wl)
             if warning:
                 warnings.append(warning)
 
@@ -126,12 +149,21 @@ def cmd_search(args: argparse.Namespace) -> int:
             source=args.source,
             days=args.days,
             limit=args.limit,
+            min_terms=getattr(args, "min_terms", None),
         )
     finally:
         storage.close()
 
     title = f"Search Results: {args.query}"
-    print(render_items_markdown(rows, title))
+    print(
+        render_search_results_markdown(
+            rows,
+            title,
+            mode=getattr(args, "mode", "broad"),
+            show_weak_matches=getattr(args, "show_weak_matches", False),
+            min_terms=getattr(args, "min_terms", None),
+        )
+    )
     return 0
 
 
@@ -150,25 +182,48 @@ def _watchlist_terms(topic: str, watchlists: List[Dict[str, Any]]) -> List[str]:
 
 def cmd_digest(args: argparse.Namespace) -> int:
     storage, _, watchlists = _load_runtime()
+    watchlist = _find_watchlist(args.topic, watchlists)
     rows_by_id: Dict[str, Dict[str, Any]] = {}
-    terms = _watchlist_terms(args.topic, watchlists)
 
     try:
-        for term in terms:
-            rows = storage.search_articles(
-                query=term,
-                source=args.source,
-                days=args.days,
-                limit=args.limit,
-            )
+        if watchlist:
+            rows = storage.list_recent(days=args.days, source=args.source, limit=max(args.limit * 30, 300))
             for row in rows:
-                rows_by_id[row["id"]] = row
+                enriched = dict(row)
+                if "text" not in enriched:
+                    enriched["text"] = ""
+                classification = classify_watchlist_article(enriched, watchlist)
+                enriched.update(classification)
+                rows_by_id[enriched["id"]] = enriched
+        else:
+            terms = _watchlist_terms(args.topic, watchlists)
+            for term in terms:
+                rows = storage.search_articles(
+                    query=term,
+                    source=args.source,
+                    days=args.days,
+                    limit=args.limit,
+                )
+                for row in rows:
+                    rows_by_id[row["id"]] = row
     finally:
         storage.close()
 
     ordered = sorted(rows_by_id.values(), key=lambda r: r.get("published_at", ""), reverse=True)[: args.limit]
-    title = f"Digest: {args.topic} (last {args.days} day(s))"
-    print(render_items_markdown(ordered, title))
+    if watchlist:
+        direct = [r for r in ordered if r.get("relevance_class") == "direct_match"]
+        near = [r for r in ordered if r.get("relevance_class") == "near_miss"]
+        print(
+            render_watchlist_digest_markdown(
+                topic=args.topic,
+                days=args.days,
+                direct_matches=direct,
+                near_misses=near,
+                watchlist=watchlist,
+            )
+        )
+    else:
+        print(render_watchlist_digest_markdown(args.topic, args.days, ordered, [], None))
     return 0
 
 
@@ -240,6 +295,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_ingest = sub.add_parser("ingest", help="Fetch and store new articles")
     p_ingest.add_argument("--mode", choices=SUPPORTED_MODES, default="rss", help="Ingestion mode")
     p_ingest.add_argument("--max-items", type=int, default=50, help="Max items per source")
+    p_ingest.add_argument("--topic", type=str, default=None, help="Optional watchlist topic for targeted gdelt ingest")
     p_ingest.set_defaults(func=cmd_ingest)
 
     p_search = sub.add_parser("search", help="Search ingested articles")
@@ -247,6 +303,13 @@ def build_parser() -> argparse.ArgumentParser:
     p_search.add_argument("--source", type=str, default=None, help="Filter by source name")
     p_search.add_argument("--days", type=int, default=None, help="Only include last N days")
     p_search.add_argument("--limit", type=int, default=30)
+    p_search.add_argument("--mode", choices=("broad", "precise"), default="broad", help="Search relevance mode")
+    p_search.add_argument("--min-terms", type=int, default=None, help="Minimum number of query terms that must match")
+    p_search.add_argument(
+        "--show-weak-matches",
+        action="store_true",
+        help="When using --mode precise, include weak matches in a separate section",
+    )
     p_search.set_defaults(func=cmd_search)
 
     p_digest = sub.add_parser("digest", help="Generate markdown digest for a topic")

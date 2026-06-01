@@ -1,6 +1,7 @@
 # OpenClaw Integration (Local CLI)
 
 This project is prepared for OpenClaw to call `news-intel` as a local tool.
+Canonical project path: `/path/to/news-intel`.
 
 ## Scope
 
@@ -16,6 +17,13 @@ This project is prepared for OpenClaw to call `news-intel` as a local tool.
 - `news-intel ingest --mode all`
 - `news-intel search "<query>"`
 - `news-intel digest --topic "<topic>" --days <number>`
+
+## CLI Path Stability
+
+- Expected CLI binary: `/path/to/news-intel/.venv/bin/news-intel`
+- Recommended symlink for shell/OpenClaw compatibility:
+  - `/opt/homebrew/bin/news-intel -> /path/to/news-intel/.venv/bin/news-intel`
+- Do not rely on `PYTHONPATH` as the normal runtime path.
 
 ## Strategic Watchlist Topics
 

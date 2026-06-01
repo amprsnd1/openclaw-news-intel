@@ -1,6 +1,12 @@
 # News Intelligence Skill
 Use this skill to search, ingest, and summarize news through the local `news-intel` CLI.
 This skill is for using the existing local news intelligence pipeline. It is not for modifying source code.
+## Canonical Project Path
+Use the canonical project path:
+`/path/to/news-intel`
+
+The expected CLI path is:
+`/path/to/news-intel/.venv/bin/news-intel`
 ## Tool
 The local CLI command is:
 ```bash

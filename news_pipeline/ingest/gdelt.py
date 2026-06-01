@@ -8,11 +8,26 @@ import time
 GDELT_DOC_API = "https://api.gdeltproject.org/api/v2/doc/doc"
 
 
-def _build_query(source_cfg: Dict[str, Any], days: int = 3) -> str:
+def _build_query(source_cfg: Dict[str, Any], topic_watchlist: Optional[Dict[str, Any]] = None, days: int = 3) -> str:
     domains = source_cfg.get("domains") or []
     base_terms = []
     if domains:
         base_terms.append("(" + " OR ".join(f"domain:{d}" for d in domains) + ")")
+
+    topic_terms: List[str] = []
+    if topic_watchlist:
+        topic_terms.extend(topic_watchlist.get("suggested_queries") or [])
+        if not topic_terms:
+            topic_terms.extend(topic_watchlist.get("context_terms") or [])
+            topic_terms.extend(topic_watchlist.get("core_terms") or [])
+            topic_terms.extend(topic_watchlist.get("event_triggers") or [])
+            topic_terms.extend(topic_watchlist.get("financial_and_policy_terms") or [])
+        topic_terms = [str(t).strip() for t in topic_terms if str(t).strip()]
+        topic_terms = topic_terms[:8]
+
+    if topic_terms:
+        query_part = "(" + " OR ".join(f'"{q}"' for q in topic_terms) + ")"
+        base_terms.append(query_part)
 
     if not base_terms:
         base_terms.append(source_cfg.get("name", "news"))
@@ -41,6 +56,7 @@ def fetch_gdelt_metadata(
     timeout: int = 20,
     max_retries: int = 2,
     retry_wait_seconds: int = 5,
+    topic_watchlist: Optional[Dict[str, Any]] = None,
 ) -> Tuple[List[Dict[str, Any]], Optional[str]]:
     status = gdelt_status()
     if not status["available"]:
@@ -55,7 +71,7 @@ def fetch_gdelt_metadata(
     max_retries = int(source_cfg.get("gdelt_max_retries", max_retries))
     retry_wait_seconds = int(source_cfg.get("gdelt_retry_wait_seconds", retry_wait_seconds))
 
-    query = _build_query(source_cfg)
+    query = _build_query(source_cfg, topic_watchlist=topic_watchlist)
     params = {
         "query": query,
         "mode": "ArtList",

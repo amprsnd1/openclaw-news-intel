@@ -66,6 +66,7 @@ def test_gdelt_timeout_returns_warning(monkeypatch: pytest.MonkeyPatch) -> None:
         timeout=1,
         max_retries=0,
         retry_wait_seconds=0,
+        topic_watchlist={"name": "europe_ru_war_preparations", "suggested_queries": ["NATO readiness Russia Europe"]},
     )
 
     assert items == []
@@ -92,6 +93,7 @@ def test_gdelt_rate_limit_returns_warning(monkeypatch: pytest.MonkeyPatch) -> No
         max_items=5,
         max_retries=0,
         retry_wait_seconds=0,
+        topic_watchlist={"name": "europe_ru_war_preparations", "suggested_queries": ["Europe rearmament ammunition production"]},
     )
 
     assert items == []
@@ -137,3 +139,51 @@ def test_digest_generation_without_optional_adapters(
     assert rc == 0
     assert "Digest: ukraine_financing" in out
     assert "Ukraine financing update" in out
+
+
+def test_gdelt_topic_ingest_no_results_graceful(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], temp_db_env: Path
+) -> None:
+    monkeypatch.setattr(
+        "news_pipeline.cli.fetch_gdelt_metadata",
+        lambda source_cfg, max_items=50, topic_watchlist=None: ([], None),
+    )
+
+    rc = cmd_ingest(argparse.Namespace(mode="gdelt", max_items=5, topic="europe_ru_war_preparations"))
+    out = capsys.readouterr().out
+
+    assert rc == 0
+    assert "Ingest complete:" in out
+    assert "mode=gdelt" in out
+
+
+def test_gdelt_topic_ingest_timeout_warning_graceful(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], temp_db_env: Path
+) -> None:
+    monkeypatch.setattr(
+        "news_pipeline.cli.fetch_gdelt_metadata",
+        lambda source_cfg, max_items=50, topic_watchlist=None: ([], "GDELT timeout during topic ingest."),
+    )
+
+    rc = cmd_ingest(argparse.Namespace(mode="gdelt", max_items=5, topic="europe_ru_war_preparations"))
+    out = capsys.readouterr().out
+
+    assert rc == 0
+    assert "WARNING: GDELT timeout during topic ingest." in out
+    assert "Ingest complete:" in out
+
+
+def test_gdelt_topic_ingest_rate_limit_warning_graceful(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str], temp_db_env: Path
+) -> None:
+    monkeypatch.setattr(
+        "news_pipeline.cli.fetch_gdelt_metadata",
+        lambda source_cfg, max_items=50, topic_watchlist=None: ([], "GDELT rate limited."),
+    )
+
+    rc = cmd_ingest(argparse.Namespace(mode="gdelt", max_items=5, topic="europe_ru_war_preparations"))
+    out = capsys.readouterr().out
+
+    assert rc == 0
+    assert "WARNING: GDELT rate limited." in out
+    assert "Ingest complete:" in out

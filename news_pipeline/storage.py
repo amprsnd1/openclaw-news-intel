@@ -8,6 +8,14 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List
 
 from .normalize import canonicalize_url, title_hash
+from .relevance import classify_search_result, match_terms_in_fields, match_terms_in_text
+
+RELEVANCE_ORDER = {
+    "direct_match": 3,
+    "strong_partial_match": 2,
+    "weak_partial_match": 1,
+    "no_match": 0,
+}
 
 
 class Storage:
@@ -225,34 +233,29 @@ class Storage:
         return unique_terms
 
     def _score_row(self, row: Dict[str, Any], terms: List[str], phrase: str) -> tuple[float, List[str]]:
-        title = (row.get("title") or "").lower()
-        summary = (row.get("summary") or "").lower()
-        text = (row.get("text") or "").lower()
-        source = (row.get("source") or "").lower()
-        keywords = (row.get("keywords_matched") or "").lower()
+        title = row.get("title") or ""
+        summary = row.get("summary") or ""
+        text = row.get("text") or ""
+        source = row.get("source") or ""
+        keywords = row.get("keywords_matched") or ""
 
         score = 0.0
-        matched_terms: List[str] = []
+        matched_terms = match_terms_in_fields([title, summary, text, source, keywords], terms)
 
-        if phrase and (phrase in title or phrase in summary or phrase in text):
+        if phrase and match_terms_in_text("\n".join([title, summary, text]), [phrase]):
             score += 8.0
 
-        for term in terms:
-            term_score = 0.0
-            if term in title:
-                term_score += 5.0
-            if term in summary:
-                term_score += 3.0
-            if term in text:
-                term_score += 2.0
-            if term in source:
-                term_score += 2.0
-            if term in keywords:
-                term_score += 2.5
-
-            if term_score > 0:
-                matched_terms.append(term)
-                score += term_score
+        for term in matched_terms:
+            if match_terms_in_text(title, [term]):
+                score += 5.0
+            if match_terms_in_text(summary, [term]):
+                score += 3.0
+            if match_terms_in_text(text, [term]):
+                score += 2.0
+            if match_terms_in_text(source, [term]):
+                score += 1.5
+            if match_terms_in_text(str(keywords), [term]):
+                score += 2.5
 
         published = row.get("published_at")
         if published:
@@ -267,7 +270,14 @@ class Storage:
 
         return score, matched_terms
 
-    def search_articles(self, query: str, source: str | None = None, days: int | None = None, limit: int = 50) -> List[Dict[str, Any]]:
+    def search_articles(
+        self,
+        query: str,
+        source: str | None = None,
+        days: int | None = None,
+        limit: int = 50,
+        min_terms: int | None = None,
+    ) -> List[Dict[str, Any]]:
         terms = self._tokenize_query(query)
         phrase = (query or "").strip().lower()
         if not terms and not phrase:
@@ -307,17 +317,36 @@ class Storage:
         scored: List[Dict[str, Any]] = []
         for row in rows:
             score, matched_terms = self._score_row(row, terms, phrase)
-            if not matched_terms and not (phrase and phrase in " ".join([row.get("title", "").lower(), row.get("summary", "").lower(), row.get("text", "").lower()])):
+            if not matched_terms and not match_terms_in_text(
+                " ".join([row.get("title", ""), row.get("summary", ""), row.get("text", "")]),
+                [phrase],
+            ):
                 continue
-            row["matched_terms"] = sorted(set(matched_terms))
+            matched_terms = sorted(set(matched_terms))
+            row["matched_terms"] = matched_terms
+            row["missing_terms"] = [term for term in terms if term not in matched_terms]
+            row["matched_term_count"] = len(matched_terms)
+            row["relevance_class"] = classify_search_result(terms, matched_terms)
+            row["relevance_rank"] = RELEVANCE_ORDER.get(row["relevance_class"], 0)
             row["search_score"] = round(score, 3)
+            if min_terms is not None and row["matched_term_count"] < int(min_terms):
+                continue
             scored.append(row)
 
-        scored.sort(key=lambda r: (r.get("search_score", 0.0), r.get("published_at", "")), reverse=True)
+        scored.sort(
+            key=lambda r: (
+                r.get("relevance_rank", 0),
+                r.get("matched_term_count", 0),
+                r.get("search_score", 0.0),
+                r.get("published_at", ""),
+            ),
+            reverse=True,
+        )
         trimmed = scored[: int(limit)]
         for row in trimmed:
             row.pop("text", None)
             row.pop("search_score", None)
+            row.pop("relevance_rank", None)
         return trimmed
 
     def list_recent(self, days: int = 3, source: str | None = None, limit: int = 200) -> List[Dict[str, Any]]:
@@ -330,7 +359,7 @@ class Storage:
 
         params.append(int(limit))
         sql = f"""
-            SELECT id, source, title, url, published_at, summary, keywords_matched, access_mode
+            SELECT id, source, title, url, published_at, summary, text, keywords_matched, access_mode
             FROM articles
             WHERE {' AND '.join(where)}
             ORDER BY published_at DESC
