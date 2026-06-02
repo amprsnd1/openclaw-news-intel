@@ -118,3 +118,14 @@ sources:
     gdelt_max_retries: 2
     gdelt_retry_wait_seconds: 5
     enabled: true
+
+gdelt:
+  enabled: true
+  max_queries_per_topic: 2
+  max_items_per_query: 10
+  timeout_seconds: 20
+  retry_count: 1
+  backoff_seconds: 30
+  cache_ttl_minutes: 180
+  min_delay_between_queries_seconds: 15
+  stop_on_first_rate_limit: true

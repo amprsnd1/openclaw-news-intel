@@ -15,8 +15,17 @@ Canonical project path: `/path/to/news-intel`.
 - `news-intel stats`
 - `news-intel ingest --mode rss`
 - `news-intel ingest --mode all`
+- `news-intel collect --topic "<topic>" --days <number> --max-items <number>`
+- `news-intel collect --topic "<topic>" --days <number> --max-items <number> --max-queries <number> --use-cache-first`
+- `news-intel collect --topic "<topic>" --days <number> --max-items <number> --dry-run-queries`
+- `news-intel collect --topic "<topic>" --days <number> --max-items <number> --no-enrich`
+- `news-intel collect --topic "<topic>" --days <number> --max-items <number> --enrich fundus`
+- `news-intel enrich --topic "<topic>" --days <number> --adapter fundus --max-items <number>`
+- `news-intel enrich --topic "<topic>" --days <number> --adapter fundus --max-items <number> --include-rss`
+- `news-intel enrich-url "<public_url>" --adapter fundus`
 - `news-intel search "<query>"`
 - `news-intel digest --topic "<topic>" --days <number>`
+- `news-intel digest --topic "<topic>" --days <number> --include-metadata-only`
 
 ## CLI Path Stability
 
@@ -37,19 +46,39 @@ Use these topic names directly with `news-intel digest`:
 
 Example commands:
 
+- `news-intel collect --topic "europe_ru_war_preparations" --days 7 --max-items 50 --max-queries 1 --use-cache-first`
+- `news-intel enrich --topic "europe_ru_war_preparations" --days 30 --adapter fundus --max-items 100 --include-rss`
+- `news-intel digest --topic "europe_ru_war_preparations" --days 7 --include-metadata-only`
+- `news-intel enrich-url "<public_url>" --adapter fundus`
+- `news-intel collect --topic "europe_ru_war_preparations" --days 7 --max-items 50 --dry-run-queries`
 - `news-intel digest --topic "europe_ru_war_preparations" --days 7`
+- `news-intel collect --topic "china_taiwan_risk" --days 7 --max-items 100 --no-enrich`
 - `news-intel digest --topic "china_taiwan_risk" --days 7`
 - `news-intel digest --topic "iran_war_risk" --days 7`
 - `news-intel digest --topic "migration_policy_europe" --days 7`
 - `news-intel digest --topic "global_trade_and_country_flows" --days 7`
+- `news-intel enrich --topic "europe_ru_war_preparations" --days 7 --adapter fundus --max-items 25`
 
 ## Data Access Policy
 
-- RSS-first architecture is retained.
-- Fundus and GDELT are optional.
+- GDELT is the primary strategic topic discovery source.
+- RSS-first ingestion remains available as a safe fallback.
+- Fundus is optional enrichment only.
 - No paywall bypassing.
 - No scraping subscription-only content.
 - Reuters, Bloomberg, FT, WSJ remain metadata-only unless licensed API integrations are added.
+- Reports should disclose `access_mode` and `enrichment_status`.
+- Strategic digest reports should distinguish high, medium, low confidence direct matches, near misses, and gaps.
+- OpenClaw should report GDELT cache usage and rate-limit warnings.
+
+## Recommended Strategic Workflow
+
+- Run `news-intel collect --topic "<topic>" --days 7 --max-items 50 --max-queries 1 --use-cache-first`.
+- Run `news-intel enrich --topic "<topic>" --days 30 --adapter fundus --max-items 100 --include-rss`.
+- Run `news-intel digest --topic "<topic>" --days 7 --include-metadata-only`.
+- If Fundus returns `enriched=0`, report the eligibility breakdown and skipped examples.
+- If results look broad or weak, run `news-intel collect --topic "<topic>" --days 7 --max-items 50 --dry-run-queries` and inspect planned GDELT queries.
+- Keep GDELT query counts conservative.
 
 ## Expected Behavior with Optional Adapter Failures
 

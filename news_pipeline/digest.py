@@ -128,17 +128,81 @@ def render_watchlist_digest_markdown(
     direct_matches: List[Dict],
     near_misses: List[Dict],
     watchlist: Dict | None,
+    collector_status: Dict | None = None,
+    candidate_diagnostics: Dict | None = None,
 ) -> str:
     lines: List[str] = [f"# Digest: {topic} (last {days} day(s))", ""]
 
+    if watchlist:
+        lines.extend(["## Collector Status", ""])
+        if collector_status:
+            warnings = collector_status.get("warnings") or []
+            lines.append(f"- Last run status: {collector_status.get('status', 'unknown')}")
+            lines.append(f"- Source: {collector_status.get('source', '-')}")
+            lines.append(f"- Queries planned: {collector_status.get('query_count', 0)}")
+            lines.append(f"- Inserted: {collector_status.get('inserted_count', 0)}")
+            lines.append(f"- Updated: {collector_status.get('updated_count', 0)}")
+            lines.append(f"- Enriched: {collector_status.get('enriched_count', 0)}")
+            if warnings:
+                lines.append(f"- Warnings: {len(warnings)}")
+                for warning in warnings[:3]:
+                    lines.append(f"- Warning detail: {warning}")
+            else:
+                lines.append("- Warnings: 0")
+        else:
+            lines.append("- No collection run recorded for this topic.")
+        lines.append("")
+
+    if candidate_diagnostics:
+        lines.extend(["## Corpus / Candidate Diagnostics", ""])
+        lines.append(f"- total candidates considered: {candidate_diagnostics.get('total_candidates_considered', 0)}")
+        lines.append(f"- direct matches: {candidate_diagnostics.get('direct_matches', 0)}")
+        lines.append(f"- near misses: {candidate_diagnostics.get('near_misses', 0)}")
+        lines.append(f"- GDELT candidates: {candidate_diagnostics.get('gdelt_candidates', 0)}")
+        lines.append(f"- RSS candidates: {candidate_diagnostics.get('rss_candidates', 0)}")
+        lines.append(f"- Fundus/full-text candidates: {candidate_diagnostics.get('fundus_full_text_candidates', 0)}")
+        lines.append(f"- dropped before ranking: {candidate_diagnostics.get('dropped_before_ranking', 0)}")
+        lines.append(f"- dropped after ranking: {candidate_diagnostics.get('dropped_after_ranking', 0)}")
+        warnings = (collector_status or {}).get("warnings") or []
+        if any("rate_limited_stop" in str(w) or "429" in str(w) for w in warnings) and candidate_diagnostics.get("gdelt_candidates", 0):
+            lines.append("- GDELT live collection was rate-limited. Showing existing cached/stored GDELT metadata where relevant.")
+        lines.append("")
+
     if not direct_matches:
-        lines.append("No direct matches found for this period.")
+        if (watchlist or {}).get("name") == "europe_ru_war_preparations":
+            lines.append("No direct war-preparation signals found for this period.")
+        else:
+            lines.append("No direct matches found for this period.")
         lines.append("")
     else:
-        lines.extend(["## Key Facts", ""])
-        _append_watchlist_items(lines, direct_matches)
-        lines.extend(["## Main Source List", ""])
-        _append_watchlist_items(lines, direct_matches)
+        high = [item for item in direct_matches if item.get("confidence") == "high"]
+        medium = [item for item in direct_matches if item.get("confidence") == "medium"]
+        low = [item for item in direct_matches if item.get("confidence") not in {"high", "medium"}]
+
+        if not high and (watchlist or {}).get("name") == "europe_ru_war_preparations":
+            lines.append("No high-confidence war-preparation signals found.")
+            lines.append("")
+
+        lines.extend(["## High Confidence Direct Matches", ""])
+        if high:
+            _append_watchlist_items(lines, high)
+        else:
+            lines.append("None.")
+            lines.append("")
+
+        lines.extend(["## Medium Confidence Direct Matches", ""])
+        if medium:
+            _append_watchlist_items(lines, medium)
+        else:
+            lines.append("None.")
+            lines.append("")
+
+        lines.extend(["## Low Confidence Direct Matches", ""])
+        if low:
+            _append_watchlist_items(lines, low)
+        else:
+            lines.append("None.")
+            lines.append("")
 
     if near_misses:
         lines.extend(["## Near Misses", ""])
@@ -153,7 +217,7 @@ def render_watchlist_digest_markdown(
             lines.append("")
 
         lines.extend(["## Suggested Targeted Ingestion", "Run:", "```bash"])
-        lines.append(f'news-intel ingest --mode gdelt --topic "{watchlist.get("name", topic)}" --max-items 25')
+        lines.append(f'news-intel collect --topic "{watchlist.get("name", topic)}" --days 7 --max-items 50 --max-queries 2 --use-cache-first')
         lines.extend(["```", ""])
 
     return "\n".join(lines).rstrip() + "\n"
@@ -165,13 +229,19 @@ def _append_watchlist_items(lines: List[str], items: List[Dict]) -> None:
         core = ", ".join(item.get("matched_core_terms") or []) or "-"
         events = ", ".join(item.get("matched_event_triggers") or []) or "-"
         financial = ", ".join(item.get("matched_financial_terms") or []) or "-"
+        discovery_source = item.get("discovery_source") or "-"
+        enrichment_status = item.get("enrichment_status") or "not_attempted"
         lines.extend(
             [
                 f"{idx}. {_link(item.get('title', '(untitled)'), item.get('url', ''))}",
                 f"   Source: {item.get('source', 'unknown')}",
                 f"   Date: {item.get('published_at', '')}",
                 f"   Access mode: {item.get('access_mode', 'public')}",
+                f"   Discovery source: {discovery_source}",
+                f"   Enrichment: {enrichment_status}",
                 f"   Relevance: {item.get('relevance_class', 'noise')}",
+                f"   Confidence: {item.get('confidence', 'low')}",
+                f"   Reason: {item.get('reason', '-')}",
                 f"   Matched context terms: {context}",
                 f"   Matched core terms: {core}",
                 f"   Matched event triggers: {events}",

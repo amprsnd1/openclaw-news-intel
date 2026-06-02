@@ -88,6 +88,24 @@ def load_watchlists(path: Path = DEFAULT_WATCHLISTS_FILE) -> List[Dict[str, Any]
     return normalized
 
 
+def load_gdelt_config(path: Path = DEFAULT_SOURCES_FILE) -> Dict[str, Any]:
+    data = _read_yaml(path)
+    cfg = data.get("gdelt", {}) or {}
+    if not isinstance(cfg, dict):
+        raise ConfigError("'gdelt' must be a map")
+    return {
+        "enabled": cfg.get("enabled", True),
+        "max_queries_per_topic": int(cfg.get("max_queries_per_topic", 5)),
+        "max_items_per_query": int(cfg.get("max_items_per_query", 20)),
+        "timeout_seconds": int(cfg.get("timeout_seconds", 15)),
+        "retry_count": int(cfg.get("retry_count", 2)),
+        "backoff_seconds": int(cfg.get("backoff_seconds", 5)),
+        "cache_ttl_minutes": int(cfg.get("cache_ttl_minutes", 60)),
+        "min_delay_between_queries_seconds": int(cfg.get("min_delay_between_queries_seconds", 0)),
+        "stop_on_first_rate_limit": bool(cfg.get("stop_on_first_rate_limit", True)),
+    }
+
+
 def get_enabled_sources(sources: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return [s for s in sources if s.get("enabled", True)]
 

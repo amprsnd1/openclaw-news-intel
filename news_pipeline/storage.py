@@ -90,9 +90,49 @@ class Storage:
                 FOREIGN KEY(article_id) REFERENCES articles(id),
                 FOREIGN KEY(watchlist) REFERENCES watchlists(name)
             );
+
+            CREATE TABLE IF NOT EXISTS collection_runs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                topic TEXT NOT NULL,
+                source TEXT NOT NULL,
+                started_at TEXT NOT NULL,
+                finished_at TEXT,
+                status TEXT NOT NULL,
+                warnings TEXT,
+                query_count INTEGER NOT NULL DEFAULT 0,
+                inserted_count INTEGER NOT NULL DEFAULT 0,
+                updated_count INTEGER NOT NULL DEFAULT 0,
+                enriched_count INTEGER NOT NULL DEFAULT 0
+            );
+
+            CREATE TABLE IF NOT EXISTS article_sources_metadata (
+                article_id TEXT PRIMARY KEY,
+                discovery_source TEXT,
+                discovery_query TEXT,
+                access_mode TEXT,
+                enrichment_status TEXT,
+                enrichment_adapter TEXT,
+                relevance_class TEXT,
+                confidence TEXT,
+                reason TEXT,
+                matched_context_terms TEXT,
+                matched_core_terms TEXT,
+                matched_event_triggers TEXT,
+                matched_financial_terms TEXT,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(article_id) REFERENCES articles(id)
+            );
+
+            CREATE TABLE IF NOT EXISTS gdelt_query_cache (
+                query TEXT PRIMARY KEY,
+                fetched_at TEXT NOT NULL,
+                payload TEXT NOT NULL
+            );
             """
         )
         self._ensure_column("sources", "adapter", "TEXT")
+        self._ensure_column("article_sources_metadata", "confidence", "TEXT")
+        self._ensure_column("article_sources_metadata", "reason", "TEXT")
         self.conn.commit()
 
     def _ensure_column(self, table: str, column: str, column_type: str) -> None:
@@ -206,6 +246,177 @@ class Storage:
         )
         self.conn.commit()
         return cur.rowcount > 0
+
+    def article_id_for(self, url: str, title: str) -> str | None:
+        canonical_url = canonicalize_url(url)
+        thash = title_hash(title)
+        row = self.conn.execute(
+            """
+            SELECT id
+            FROM articles
+            WHERE canonical_url = ? OR title_hash = ?
+            ORDER BY inserted_at DESC
+            LIMIT 1
+            """,
+            (canonical_url, thash),
+        ).fetchone()
+        return row["id"] if row else None
+
+    def update_article_text(
+        self,
+        article_id: str,
+        summary: str | None = None,
+        text: str | None = None,
+        title: str | None = None,
+        author: str | None = None,
+        published_at: str | None = None,
+    ) -> None:
+        updates = []
+        params: List[Any] = []
+        if title is not None:
+            updates.append("title = ?")
+            params.append(title)
+        if author is not None:
+            updates.append("author = ?")
+            params.append(author)
+        if published_at is not None:
+            updates.append("published_at = ?")
+            params.append(published_at)
+        if summary is not None:
+            updates.append("summary = ?")
+            params.append(summary)
+        if text is not None:
+            updates.append("text = ?")
+            params.append(text)
+        if not updates:
+            return
+        params.append(article_id)
+        self.conn.execute(f"UPDATE articles SET {', '.join(updates)} WHERE id = ?", params)
+        self.conn.commit()
+
+    def start_collection_run(self, topic: str, source: str, started_at: str) -> int:
+        cur = self.conn.execute(
+            """
+            INSERT INTO collection_runs(topic, source, started_at, status, warnings)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (topic, source, started_at, "running", "[]"),
+        )
+        self.conn.commit()
+        return int(cur.lastrowid)
+
+    def finish_collection_run(
+        self,
+        run_id: int,
+        finished_at: str,
+        status: str,
+        warnings: List[str],
+        query_count: int,
+        inserted_count: int,
+        updated_count: int,
+        enriched_count: int,
+    ) -> None:
+        self.conn.execute(
+            """
+            UPDATE collection_runs
+            SET finished_at = ?, status = ?, warnings = ?, query_count = ?,
+                inserted_count = ?, updated_count = ?, enriched_count = ?
+            WHERE id = ?
+            """,
+            (
+                finished_at,
+                status,
+                json.dumps(warnings, ensure_ascii=False),
+                query_count,
+                inserted_count,
+                updated_count,
+                enriched_count,
+                run_id,
+            ),
+        )
+        self.conn.commit()
+
+    def upsert_article_metadata(self, article_id: str, metadata: Dict[str, Any]) -> None:
+        self.conn.execute(
+            """
+            INSERT INTO article_sources_metadata(
+                article_id, discovery_source, discovery_query, access_mode, enrichment_status,
+                enrichment_adapter, relevance_class, confidence, reason, matched_context_terms, matched_core_terms,
+                matched_event_triggers, matched_financial_terms
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(article_id) DO UPDATE SET
+                discovery_source=COALESCE(excluded.discovery_source, discovery_source),
+                discovery_query=COALESCE(excluded.discovery_query, discovery_query),
+                access_mode=COALESCE(excluded.access_mode, access_mode),
+                enrichment_status=COALESCE(excluded.enrichment_status, enrichment_status),
+                enrichment_adapter=COALESCE(excluded.enrichment_adapter, enrichment_adapter),
+                relevance_class=COALESCE(excluded.relevance_class, relevance_class),
+                confidence=COALESCE(excluded.confidence, confidence),
+                reason=COALESCE(excluded.reason, reason),
+                matched_context_terms=COALESCE(excluded.matched_context_terms, matched_context_terms),
+                matched_core_terms=COALESCE(excluded.matched_core_terms, matched_core_terms),
+                matched_event_triggers=COALESCE(excluded.matched_event_triggers, matched_event_triggers),
+                matched_financial_terms=COALESCE(excluded.matched_financial_terms, matched_financial_terms),
+                updated_at=CURRENT_TIMESTAMP
+            """,
+            (
+                article_id,
+                metadata.get("discovery_source"),
+                metadata.get("discovery_query"),
+                metadata.get("access_mode"),
+                metadata.get("enrichment_status"),
+                metadata.get("enrichment_adapter"),
+                metadata.get("relevance_class"),
+                metadata.get("confidence"),
+                metadata.get("reason"),
+                json.dumps(metadata.get("matched_context_terms", []), ensure_ascii=False),
+                json.dumps(metadata.get("matched_core_terms", []), ensure_ascii=False),
+                json.dumps(metadata.get("matched_event_triggers", []), ensure_ascii=False),
+                json.dumps(metadata.get("matched_financial_terms", []), ensure_ascii=False),
+            ),
+        )
+        self.conn.commit()
+
+    def get_gdelt_cache(self, query: str) -> Dict[str, Any] | None:
+        row = self.conn.execute(
+            "SELECT fetched_at, payload FROM gdelt_query_cache WHERE query = ?",
+            (query,),
+        ).fetchone()
+        if not row:
+            return None
+        try:
+            return {"fetched_at": row["fetched_at"], "payload": json.loads(row["payload"])}
+        except Exception:
+            return None
+
+    def set_gdelt_cache(self, query: str, fetched_at: str, payload: Dict[str, Any]) -> None:
+        self.conn.execute(
+            """
+            INSERT INTO gdelt_query_cache(query, fetched_at, payload)
+            VALUES (?, ?, ?)
+            ON CONFLICT(query) DO UPDATE SET fetched_at=excluded.fetched_at, payload=excluded.payload
+            """,
+            (query, fetched_at, json.dumps(payload, ensure_ascii=False)),
+        )
+        self.conn.commit()
+
+    def list_articles_for_enrichment(self, days: int, topic: str, limit: int) -> List[Dict[str, Any]]:
+        rows = self.conn.execute(
+            """
+            SELECT a.id, a.source, a.title, a.url, a.published_at, a.summary, a.text, a.access_mode,
+                   m.discovery_source, m.discovery_query, m.enrichment_status, m.enrichment_adapter,
+                   m.relevance_class, m.confidence, m.reason
+            FROM articles a
+            JOIN article_sources_metadata m ON m.article_id = a.id
+            WHERE a.published_at >= datetime('now', ?)
+              AND m.discovery_query IS NOT NULL
+              AND (m.enrichment_status IS NULL OR m.enrichment_status IN ('not_attempted', 'failed', 'adapter_unavailable'))
+            ORDER BY a.published_at DESC
+            LIMIT ?
+            """,
+            (f"-{int(days)} day", int(limit)),
+        ).fetchall()
+        return [dict(r) for r in rows]
 
     def insert_match(self, article_id: str, match: Dict[str, Any]) -> None:
         self.conn.execute(
@@ -351,22 +562,50 @@ class Storage:
 
     def list_recent(self, days: int = 3, source: str | None = None, limit: int = 200) -> List[Dict[str, Any]]:
         params: List[Any] = [f"-{int(days)} day"]
-        where = ["published_at >= datetime('now', ?)"]
+        where = ["a.published_at >= datetime('now', ?)"]
 
         if source:
-            where.append("source = ?")
+            where.append("a.source = ?")
             params.append(source)
 
         params.append(int(limit))
         sql = f"""
-            SELECT id, source, title, url, published_at, summary, text, keywords_matched, access_mode
-            FROM articles
+            SELECT a.id, a.source, a.title, a.url, a.published_at, a.summary, a.text, a.keywords_matched,
+                   COALESCE(m.access_mode, a.access_mode) AS access_mode,
+                   m.discovery_source, m.discovery_query, m.enrichment_status, m.enrichment_adapter,
+                   m.relevance_class AS stored_relevance_class, m.confidence AS stored_confidence,
+                   m.reason AS stored_reason,
+                   m.matched_context_terms, m.matched_core_terms, m.matched_event_triggers,
+                   m.matched_financial_terms
+            FROM articles a
+            LEFT JOIN article_sources_metadata m ON m.article_id = a.id
             WHERE {' AND '.join(where)}
-            ORDER BY published_at DESC
+            ORDER BY a.published_at DESC
             LIMIT ?
         """
         rows = self.conn.execute(sql, params).fetchall()
         return [dict(r) for r in rows]
+
+    def latest_collection_run(self, topic: str) -> Dict[str, Any] | None:
+        row = self.conn.execute(
+            """
+            SELECT topic, source, started_at, finished_at, status, warnings, query_count,
+                   inserted_count, updated_count, enriched_count
+            FROM collection_runs
+            WHERE topic = ?
+            ORDER BY started_at DESC
+            LIMIT 1
+            """,
+            (topic,),
+        ).fetchone()
+        if not row:
+            return None
+        data = dict(row)
+        try:
+            data["warnings"] = json.loads(data.get("warnings") or "[]")
+        except Exception:
+            data["warnings"] = []
+        return data
 
     def list_sources(self) -> List[Dict[str, Any]]:
         rows = self.conn.execute(
@@ -399,6 +638,28 @@ class Storage:
             ORDER BY count DESC, adapter ASC
             """
         ).fetchall()
+        latest_gdelt = self.conn.execute(
+            """
+            SELECT topic, started_at, finished_at, status, warnings
+            FROM collection_runs
+            WHERE source LIKE '%gdelt%'
+            ORDER BY started_at DESC
+            LIMIT 1
+            """
+        ).fetchone()
+        last_429 = self.conn.execute(
+            """
+            SELECT finished_at
+            FROM collection_runs
+            WHERE source LIKE '%gdelt%' AND warnings LIKE '%429%'
+            ORDER BY started_at DESC
+            LIMIT 1
+            """
+        ).fetchone()
+        cache_count = self.conn.execute("SELECT COUNT(*) AS c FROM gdelt_query_cache").fetchone()["c"]
+        fresh_cache_count = self.conn.execute(
+            "SELECT COUNT(*) AS c FROM gdelt_query_cache WHERE fetched_at >= datetime('now', '-180 minutes')"
+        ).fetchone()["c"]
 
         return {
             "total_articles": total_articles,
@@ -406,4 +667,10 @@ class Storage:
             "total_matches": total_matches,
             "articles_by_source": [dict(r) for r in by_source_rows],
             "enabled_sources_by_adapter": [dict(r) for r in source_by_adapter_rows],
+            "gdelt_runtime": {
+                "latest_run": dict(latest_gdelt) if latest_gdelt else None,
+                "last_429_time": last_429["finished_at"] if last_429 else None,
+                "cache_entries": cache_count,
+                "fresh_cache_entries": fresh_cache_count,
+            },
         }

@@ -10,6 +10,37 @@ watchlists:
     phrases:
       - Ukraine IMF loan
       - sovereign debt
+    context_terms:
+      - Ukraine
+      - Ukrainian
+      - Kyiv
+      - IMF
+      - EU
+      - European Union
+      - G7
+      - World Bank
+    core_terms:
+      - financing
+      - loan
+      - loans
+      - tranche
+      - disbursement
+      - aid package
+      - budget support
+      - macro financial assistance
+      - Ukraine Facility
+      - frozen assets
+      - frozen Russian assets
+      - windfall profits
+      - sovereign debt
+      - bond
+      - bonds
+      - restructuring
+      - fiscal gap
+      - deficit
+      - donor funding
+      - grant
+      - guarantees
     suggested_queries:
       - Ukraine IMF tranche
       - Ukraine EU loan

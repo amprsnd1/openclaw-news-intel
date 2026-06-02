@@ -72,38 +72,16 @@ def fetch_gdelt_metadata(
     retry_wait_seconds = int(source_cfg.get("gdelt_retry_wait_seconds", retry_wait_seconds))
 
     query = _build_query(source_cfg, topic_watchlist=topic_watchlist)
-    params = {
-        "query": query,
-        "mode": "ArtList",
-        "maxrecords": min(max_items, 250),
-        "format": "json",
-    }
-
-    payload: Dict[str, Any] = {}
-    for attempt in range(max_retries + 1):
-        try:
-            response = requests.get(GDELT_DOC_API, params=params, timeout=timeout)
-            if response.status_code == 429:
-                if attempt < max_retries:
-                    time.sleep(retry_wait_seconds)
-                    continue
-                return [], f"GDELT rate limited (HTTP 429) for source '{source_cfg.get('name', 'unknown')}'."
-            if response.status_code >= 400:
-                return [], f"GDELT HTTP {response.status_code} for source '{source_cfg.get('name', 'unknown')}'."
-            payload = response.json()
-            break
-        except requests.Timeout:
-            if attempt >= max_retries:
-                return [], f"GDELT timeout after {max_retries + 1} attempt(s) for source '{source_cfg.get('name', 'unknown')}'."
-            time.sleep(retry_wait_seconds)
-        except requests.RequestException as exc:
-            if attempt >= max_retries:
-                return [], f"GDELT request failed for source '{source_cfg.get('name', 'unknown')}': {exc}"
-            time.sleep(retry_wait_seconds)
-        except Exception:
-            if attempt >= max_retries:
-                return [], f"GDELT response parse failed for source '{source_cfg.get('name', 'unknown')}'."
-            time.sleep(retry_wait_seconds)
+    payload, warning = fetch_gdelt_query(
+        query,
+        max_items=max_items,
+        timeout=timeout,
+        max_retries=max_retries,
+        retry_wait_seconds=retry_wait_seconds,
+        label=f"source '{source_cfg.get('name', 'unknown')}'",
+    )
+    if warning:
+        return [], warning
 
     articles = payload.get("articles") or []
     items: List[Dict[str, Any]] = []
@@ -123,3 +101,52 @@ def fetch_gdelt_metadata(
             }
         )
     return items, None
+
+
+def fetch_gdelt_query(
+    query: str,
+    max_items: int = 50,
+    timeout: int = 20,
+    max_retries: int = 2,
+    retry_wait_seconds: int = 5,
+    label: str | None = None,
+) -> Tuple[Dict[str, Any], Optional[str]]:
+    status = gdelt_status()
+    subject = label or f"query '{query}'"
+    if not status["available"]:
+        return {}, status["message"]
+
+    try:
+        import requests
+    except Exception as exc:
+        return {}, f"GDELT adapter import failed: {exc}"
+
+    params = {
+        "query": query,
+        "mode": "ArtList",
+        "maxrecords": min(max_items, 250),
+        "format": "json",
+    }
+    payload: Dict[str, Any] = {}
+    for attempt in range(max_retries + 1):
+        try:
+            response = requests.get(GDELT_DOC_API, params=params, timeout=timeout)
+            if response.status_code == 429:
+                return {}, f"GDELT rate limited (HTTP 429) for {subject}."
+            if response.status_code >= 400:
+                return {}, f"GDELT HTTP {response.status_code} for {subject}."
+            payload = response.json()
+            break
+        except requests.Timeout:
+            if attempt >= max_retries:
+                return {}, f"GDELT timeout after {max_retries + 1} attempt(s) for {subject}."
+            time.sleep(retry_wait_seconds)
+        except requests.RequestException as exc:
+            if attempt >= max_retries:
+                return {}, f"GDELT request failed for {subject}: {exc}"
+            time.sleep(retry_wait_seconds)
+        except Exception:
+            if attempt >= max_retries:
+                return {}, f"GDELT response parse failed for {subject}."
+            time.sleep(retry_wait_seconds)
+    return payload, None

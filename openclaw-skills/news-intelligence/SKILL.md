@@ -19,19 +19,35 @@ news-intel sources
 news-intel stats
 news-intel ingest --mode rss
 news-intel ingest --mode all
+news-intel collect --topic "<topic>" --days <number> --max-items <number>
+news-intel collect --topic "<topic>" --days <number> --max-items <number> --max-queries <number> --use-cache-first
+news-intel collect --topic "<topic>" --days <number> --max-items <number> --dry-run-queries
+news-intel collect --topic "<topic>" --days <number> --max-items <number> --no-enrich
+news-intel collect --topic "<topic>" --days <number> --max-items <number> --enrich fundus
+news-intel enrich --topic "<topic>" --days <number> --adapter fundus --max-items <number>
+news-intel enrich --topic "<topic>" --days <number> --adapter fundus --max-items <number> --include-rss
+news-intel enrich-url "<public_url>" --adapter fundus
 news-intel search "<query>"
 news-intel digest --topic "<topic>" --days <number>
+news-intel digest --topic "<topic>" --days <number> --include-metadata-only
 ```
 ## Core rules
-- RSS is the core ingestion path.
-- Fundus is optional.
-- GDELT is optional.
+- GDELT is the primary strategic topic discovery source.
+- RSS is fallback and remains the core safe ingestion path.
+- Fundus is optional enrichment only.
 - Do not bypass paywalls.
 - Do not scrape subscription-only sources.
 - Do not use browser automation to access restricted media.
 - Reuters, Bloomberg, Financial Times, and Wall Street Journal are metadata-only unless licensed API access is configured.
 - If Fundus or GDELT fails, continue with available data.
+- Use collect before digest for strategic topics.
+- Prefer conservative GDELT query counts.
+- Use `--dry-run-queries` if a topic returns poor results.
+- Always report GDELT rate limits and cache usage.
+- Always distinguish high, medium, low confidence direct matches, near misses, and gaps.
+- If Fundus returns enriched=0, report the eligibility breakdown and skipped examples.
 - Always include source, date, title, and URL when reporting article results.
+- Always disclose access_mode and enrichment_status when reporting collected topic results.
 - Prefer recent articles.
 - Return concise markdown reports.
 - Do not modify source code.
@@ -61,8 +77,25 @@ news-intel stats
 ```
 For a fresh digest, run:
 ```bash
+news-intel collect --topic "<topic>" --days 7 --max-items 50 --max-queries 1 --use-cache-first
+news-intel enrich --topic "<topic>" --days 30 --adapter fundus --max-items 100 --include-rss
+news-intel digest --topic "<topic>" --days <number> --include-metadata-only
+```
+To inspect planned GDELT queries without network calls, run:
+```bash
+news-intel collect --topic "<topic>" --days 7 --max-items 50 --dry-run-queries
+```
+For RSS fallback ingestion, run:
+```bash
 news-intel ingest --mode rss
-news-intel digest --topic "<topic>" --days <number>
+```
+For optional Fundus enrichment of already collected articles, run:
+```bash
+news-intel enrich --topic "<topic>" --days 7 --adapter fundus --max-items 50
+```
+For a Fundus URL diagnostic, run:
+```bash
+news-intel enrich-url "<public_url>" --adapter fundus
 ```
 For a search task, run:
 ```bash
