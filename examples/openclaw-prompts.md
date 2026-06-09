@@ -4,6 +4,18 @@
 
 "Run `news-intel ingest --mode rss` then `news-intel digest --topic \"ukraine_financing\" --days 3`. Return concise markdown with source, date, title, and URL."
 
+## 1a) Morning headline signals
+
+"Use the News Intelligence skill. Run `news-intel scan --topic \"europe_ru_war_preparations\" --since \"24h\" --only-new --min-confidence medium`. Return a compact alert briefing with high and medium signals, source status, and gaps. Do not enrich unless I ask."
+
+## 1b) Last 2-hour signal check
+
+"Check the latest signals on Europe-Russia war prep. Map this to `news-intel scan --topic \"europe_ru_war_preparations\" --since \"2h\" --only-new --min-confidence medium`. Return concise markdown."
+
+## 1c) Free-form topic scan
+
+"Run `news-intel scan --query \"NATO troops eastern Europe\" --since \"24h\"`. Return high, medium, and low signals with source links."
+
 ## 2) Source health check
 
 "Run `news-intel sources` and `news-intel stats`. Summarize adapter availability, enabled source counts, and any ingestion risks."
@@ -15,6 +27,10 @@
 ## 4) Europe Russia war preparations digest
 
 "Run `news-intel collect --topic \"europe_ru_war_preparations\" --days 7 --max-items 50 --max-queries 1 --use-cache-first`, then `news-intel enrich --topic \"europe_ru_war_preparations\" --days 30 --adapter fundus --max-items 100 --include-rss`, then `news-intel digest --topic \"europe_ru_war_preparations\" --days 7 --include-metadata-only`. Return a concise briefing with source-linked items, access mode, enrichment status, confidence tier, and escalation-readiness signals. Report any GDELT cache usage, rate limits, and Fundus eligibility breakdown if enriched=0."
+
+## 4a) Google News RSS headline scan
+
+"Run `news-intel scan --topic \"europe_ru_war_preparations\" --since \"6h\" --source rss,google_news_rss`. Treat Google News RSS as headline metadata only. Return compact signal sections and source status."
 
 ## 5) China Taiwan risk digest
 

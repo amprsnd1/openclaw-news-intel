@@ -15,6 +15,11 @@ Canonical project path: `/path/to/news-intel`.
 - `news-intel stats`
 - `news-intel ingest --mode rss`
 - `news-intel ingest --mode all`
+- `news-intel scan --topic "<topic>" --since "<window>"`
+- `news-intel scan --topic "<topic>" --since "<window>" --source rss,google_news_rss`
+- `news-intel scan --query "<query>" --since "<window>"`
+- `news-intel scan --topic "<topic>" --since "<window>" --only-new`
+- `news-intel scan --topic "<topic>" --since "<window>" --min-confidence medium`
 - `news-intel collect --topic "<topic>" --days <number> --max-items <number>`
 - `news-intel collect --topic "<topic>" --days <number> --max-items <number> --max-queries <number> --use-cache-first`
 - `news-intel collect --topic "<topic>" --days <number> --max-items <number> --dry-run-queries`
@@ -36,7 +41,7 @@ Canonical project path: `/path/to/news-intel`.
 
 ## Strategic Watchlist Topics
 
-Use these topic names directly with `news-intel digest`:
+Use these topic names directly with `news-intel scan` for fast monitoring and `news-intel digest` for deeper research:
 
 - `europe_ru_war_preparations`
 - `china_taiwan_risk`
@@ -46,6 +51,10 @@ Use these topic names directly with `news-intel digest`:
 
 Example commands:
 
+- `news-intel scan --topic "europe_ru_war_preparations" --since "2h" --only-new --min-confidence medium`
+- `news-intel scan --topic "migration_policy_europe" --since "24h"`
+- `news-intel scan --query "NATO troops eastern Europe" --since "24h"`
+- `news-intel scan --topic "europe_ru_war_preparations" --since "6h" --source rss,google_news_rss`
 - `news-intel collect --topic "europe_ru_war_preparations" --days 7 --max-items 50 --max-queries 1 --use-cache-first`
 - `news-intel enrich --topic "europe_ru_war_preparations" --days 30 --adapter fundus --max-items 100 --include-rss`
 - `news-intel digest --topic "europe_ru_war_preparations" --days 7 --include-metadata-only`
@@ -63,13 +72,31 @@ Example commands:
 
 - GDELT is the primary strategic topic discovery source.
 - RSS-first ingestion remains available as a safe fallback.
+- For quick news monitoring, prefer `scan`.
+- For deeper research, use `collect -> enrich -> digest`.
+- Fundus is not used by default in scan.
 - Fundus is optional enrichment only.
 - No paywall bypassing.
 - No scraping subscription-only content.
 - Reuters, Bloomberg, FT, WSJ remain metadata-only unless licensed API integrations are added.
 - Reports should disclose `access_mode` and `enrichment_status`.
 - Strategic digest reports should distinguish high, medium, low confidence direct matches, near misses, and gaps.
+- Signal scan reports should distinguish high, medium, and low signals, then source status and gaps.
 - OpenClaw should report GDELT cache usage and rate-limit warnings.
+
+## Recommended Fast Signal Workflow
+
+- Run `news-intel scan --topic "<topic>" --since "2h" --only-new --min-confidence medium` for alert-style monitoring.
+- Run `news-intel scan --topic "<topic>" --since "24h"` for morning headline checks.
+- Run `news-intel scan --query "<query>" --since "24h"` for free-form monitoring.
+- If RSS coverage looks thin, run `news-intel scan --topic "<topic>" --since "6h" --source rss,google_news_rss`.
+- Only enrich after a signal needs deeper context.
+
+Natural-language mapping examples:
+- "check the latest signals" -> `news-intel scan --topic "<topic>" --since "2h" --only-new --min-confidence medium`
+- "morning headlines" -> `news-intel scan --topic "<topic>" --since "24h" --only-new --min-confidence medium`
+- "scan the last 2 hours" -> `news-intel scan --topic "<topic>" --since "2h" --only-new --min-confidence medium`
+- "anything new on Europe-Russia war prep?" -> `news-intel scan --topic "europe_ru_war_preparations" --since "2h" --only-new --min-confidence medium`
 
 ## Recommended Strategic Workflow
 

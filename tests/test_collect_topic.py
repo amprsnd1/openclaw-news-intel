@@ -52,12 +52,13 @@ def temp_db_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
 
 
 def _articles_for(urls: list[str]):
+    seen_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
     return {
         "articles": [
             {
                 "title": f"NATO readiness and air defense procurement {idx}",
                 "url": url,
-                "seendate": "20260601T120000Z",
+                "seendate": seen_at,
                 "snippet": "Europe and Russia threat context with defense budget and air defense procurement.",
                 "language": "en",
                 "sourcecountry": "US",

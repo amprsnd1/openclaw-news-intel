@@ -1,18 +1,20 @@
 # openclaw-news-intel
 
-GDELT-first topic discovery and local news intelligence pipeline designed for OpenClaw workflows.
+Headline signal scanner and local news intelligence pipeline designed for OpenClaw workflows.
 
-`news-intel` collects, normalizes, deduplicates, filters, and summarizes news from public/legal sources into a local SQLite database, then exposes search and digest commands for repeatable briefings.
+`news-intel` scans fresh public/legal headlines for watchlist signals, stores normalized metadata in SQLite, and can escalate from compact alert-style scans to deeper collection, enrichment, search, and digest workflows.
 
 ## What This Project Does
 
-- Collects strategic topic metadata from GDELT.
+- Scans fresh RSS/metadata headlines for topic signals.
+- Supports free-form headline scans.
+- Collects strategic topic metadata from GDELT for deeper discovery.
 - Keeps public RSS ingestion as a safe fallback path.
 - Supports optional Fundus enrichment for public supported articles.
 - Normalizes all items into a stable article schema.
 - Deduplicates by canonical URL and near-duplicate title hash.
 - Applies watchlists for topic monitoring.
-- Generates markdown search results and digests for analyst workflows.
+- Generates compact signal scans, markdown search results, and research digests.
 - Integrates with OpenClaw as a safe local CLI skill.
 
 ## What This Project Does Not Do
@@ -24,6 +26,8 @@ GDELT-first topic discovery and local news intelligence pipeline designed for Op
 
 ## Core Architecture
 
+- Fast signal mode: `rss` headline scanning by default
+- Optional headline discovery: `google_news_rss`, `gdelt`
 - Strategic topic discovery: `gdelt`
 - Safe fallback ingestion: `rss`
 - Optional enrichment: `fundus` (extra dependency)
@@ -46,6 +50,7 @@ news_pipeline/
   dedupe.py
   filters.py
   storage.py
+  scanner.py
   digest.py
 config/
   sources.yaml
@@ -122,6 +127,48 @@ news-intel sources
 news-intel stats
 ```
 
+### Fast Signal Mode
+
+Use `scan` for quick monitoring, morning headlines, and alert-style checks. This is the preferred OpenClaw path for “anything new?” questions.
+
+```bash
+news-intel scan --topic "europe_ru_war_preparations" --since "2h"
+news-intel scan --topic "china_taiwan_risk" --since "6h"
+news-intel scan --topic "migration_policy_europe" --since "24h"
+news-intel scan --query "NATO troops eastern Europe" --since "24h"
+news-intel scan --topic "europe_ru_war_preparations" --since "24h" --min-confidence medium
+news-intel scan --topic "europe_ru_war_preparations" --since "24h" --only-new
+```
+
+Defaults:
+- `source= rss`
+- `since=6h`
+- `max_items=50`
+- `only_new=true`
+- `format=markdown`
+
+Optional headline discovery:
+
+```bash
+news-intel scan --query "NATO Russia readiness eastern Europe" --since "24h" --source google_news_rss
+news-intel scan --topic "europe_ru_war_preparations" --since "6h" --source rss,google_news_rss
+news-intel scan --topic "europe_ru_war_preparations" --since "6h" --source rss,gdelt --max-queries 1 --use-cache-first
+```
+
+Scan behavior:
+- Pulls headline/summary metadata first.
+- Does not require full text.
+- Does not run Fundus by default.
+- Classifies matches as `high_signal`, `medium_signal`, `low_signal`, or `noise`.
+- Hides previously shown scan items by default; use `--show-seen` to inspect older matches.
+- Uses token-aware matching to avoid substring false positives.
+
+Use optional Fundus enrichment only after a signal needs deeper context:
+
+```bash
+news-intel enrich --topic "<topic>" --days 1 --adapter fundus --max-items 10 --include-rss
+```
+
 ### Ingestion
 
 ```bash
@@ -136,7 +183,7 @@ Behavior:
 - Fundus missing: clear error only when Fundus mode is requested.
 - GDELT unavailable/timeout/rate-limited: warning + continue.
 
-### Topic collection
+### Research Digest Mode
 
 ```bash
 news-intel collect --topic "europe_ru_war_preparations" --days 7 --max-items 100
@@ -149,6 +196,8 @@ news-intel collect --topic "europe_ru_war_preparations" --days 7 --max-items 100
 ```
 
 Collection uses GDELT query discovery, stores metadata locally, classifies relevance against the watchlist, and optionally enriches public supported URLs with Fundus. GDELT failures are warnings, not hard failures.
+
+Use research digest mode for longer briefings, weekly review, source diagnostics, and enriched context. Use scan mode first for fast headline monitoring.
 
 Recommended strategic workflow:
 

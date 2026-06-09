@@ -129,3 +129,19 @@ gdelt:
   cache_ttl_minutes: 180
   min_delay_between_queries_seconds: 15
   stop_on_first_rate_limit: true
+
+source_groups:
+  fast_news:
+    - BBC
+    - The Guardian
+    - Politico EU
+    - AP News
+    - Der Spiegel
+    - Le Monde
+
+official_source_roadmap:
+  - NATO public news and press feeds
+  - European Commission Press Corner RSS/API where available
+  - European Council public news feeds
+  - European Defence Agency public updates
+  - Selected national defense ministry RSS/API endpoints where stable

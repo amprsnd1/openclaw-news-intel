@@ -128,6 +128,15 @@ class Storage:
                 fetched_at TEXT NOT NULL,
                 payload TEXT NOT NULL
             );
+
+            CREATE TABLE IF NOT EXISTS scan_seen (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                scan_key TEXT NOT NULL,
+                article_id TEXT NOT NULL,
+                shown_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(scan_key, article_id),
+                FOREIGN KEY(article_id) REFERENCES articles(id)
+            );
             """
         )
         self._ensure_column("sources", "adapter", "TEXT")
@@ -585,6 +594,26 @@ class Storage:
         """
         rows = self.conn.execute(sql, params).fetchall()
         return [dict(r) for r in rows]
+
+    def scan_seen_ids(self, scan_key: str) -> set[str]:
+        rows = self.conn.execute(
+            "SELECT article_id FROM scan_seen WHERE scan_key = ?",
+            (scan_key,),
+        ).fetchall()
+        return {str(row["article_id"]) for row in rows}
+
+    def mark_scan_seen(self, scan_key: str, article_ids: Iterable[str]) -> None:
+        rows = [(scan_key, article_id) for article_id in article_ids if article_id]
+        if not rows:
+            return
+        self.conn.executemany(
+            """
+            INSERT OR IGNORE INTO scan_seen(scan_key, article_id)
+            VALUES (?, ?)
+            """,
+            rows,
+        )
+        self.conn.commit()
 
     def latest_collection_run(self, topic: str) -> Dict[str, Any] | None:
         row = self.conn.execute(

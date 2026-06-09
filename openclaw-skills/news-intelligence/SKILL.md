@@ -19,6 +19,11 @@ news-intel sources
 news-intel stats
 news-intel ingest --mode rss
 news-intel ingest --mode all
+news-intel scan --topic "<topic>" --since "<window>"
+news-intel scan --topic "<topic>" --since "<window>" --source rss,google_news_rss
+news-intel scan --query "<query>" --since "<window>"
+news-intel scan --topic "<topic>" --since "<window>" --only-new
+news-intel scan --topic "<topic>" --since "<window>" --min-confidence medium
 news-intel collect --topic "<topic>" --days <number> --max-items <number>
 news-intel collect --topic "<topic>" --days <number> --max-items <number> --max-queries <number> --use-cache-first
 news-intel collect --topic "<topic>" --days <number> --max-items <number> --dry-run-queries
@@ -34,6 +39,9 @@ news-intel digest --topic "<topic>" --days <number> --include-metadata-only
 ## Core rules
 - GDELT is the primary strategic topic discovery source.
 - RSS is fallback and remains the core safe ingestion path.
+- For quick news monitoring, prefer `scan`.
+- For deeper research, use `collect -> enrich -> digest`.
+- Fundus is not used by default in scan; enrich only after a signal needs deeper context.
 - Fundus is optional enrichment only.
 - Do not bypass paywalls.
 - Do not scrape subscription-only sources.
@@ -45,6 +53,7 @@ news-intel digest --topic "<topic>" --days <number> --include-metadata-only
 - Use `--dry-run-queries` if a topic returns poor results.
 - Always report GDELT rate limits and cache usage.
 - Always distinguish high, medium, low confidence direct matches, near misses, and gaps.
+- For scan output, always distinguish high, medium, and low signals, then report source status and gaps.
 - If Fundus returns enriched=0, report the eligibility breakdown and skipped examples.
 - Always include source, date, title, and URL when reporting article results.
 - Always disclose access_mode and enrichment_status when reporting collected topic results.
@@ -75,6 +84,15 @@ For a source health check, run:
 news-intel sources
 news-intel stats
 ```
+For quick monitoring, run:
+```bash
+news-intel scan --topic "<topic>" --since "2h" --only-new --min-confidence medium
+```
+Natural language mappings:
+- "check the latest signals" -> `news-intel scan --topic "<topic>" --since "2h" --only-new --min-confidence medium`
+- "morning headlines" -> `news-intel scan --topic "<topic>" --since "24h" --only-new --min-confidence medium`
+- "scan the last 2 hours" -> `news-intel scan --topic "<topic>" --since "2h" --only-new --min-confidence medium`
+- "anything new on Europe-Russia war prep?" -> `news-intel scan --topic "europe_ru_war_preparations" --since "2h" --only-new --min-confidence medium`
 For a fresh digest, run:
 ```bash
 news-intel collect --topic "<topic>" --days 7 --max-items 50 --max-queries 1 --use-cache-first

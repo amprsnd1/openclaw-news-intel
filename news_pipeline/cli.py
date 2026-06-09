@@ -13,6 +13,7 @@ from .ingest.gdelt import fetch_gdelt_metadata, gdelt_status
 from .ingest.rss import fetch_rss
 from .normalize import normalize_article, utc_now_iso
 from .relevance import classify_watchlist_article
+from .scanner import render_scan_markdown, run_scan
 from .storage import Storage
 
 SUPPORTED_MODES = ("rss", "fundus", "gdelt", "all")
@@ -165,6 +166,47 @@ def cmd_search(args: argparse.Namespace) -> int:
             min_terms=getattr(args, "min_terms", None),
         )
     )
+    return 0
+
+
+def cmd_scan(args: argparse.Namespace) -> int:
+    storage, sources, watchlists = _load_runtime()
+    watchlist = _find_watchlist(args.topic, watchlists) if args.topic else None
+    if args.topic and not watchlist:
+        storage.close()
+        print(f"ERROR: Watchlist topic '{args.topic}' not found.")
+        return 2
+    if not args.topic and not args.query:
+        storage.close()
+        print("ERROR: scan requires --topic or --query.")
+        return 2
+    try:
+        result = run_scan(
+            storage,
+            sources,
+            watchlist=watchlist,
+            query=args.query,
+            since=args.since,
+            max_items=args.max_items,
+            sources=args.source,
+            min_confidence=args.min_confidence,
+            only_new=args.only_new,
+            show_seen=args.show_seen,
+            max_queries=args.max_queries,
+            use_cache_first=args.use_cache_first,
+            gdelt_config=load_gdelt_config(),
+        )
+    except ValueError as exc:
+        storage.close()
+        print(f"ERROR: {exc}")
+        return 2
+    finally:
+        try:
+            storage.close()
+        except Exception:
+            pass
+
+    print(render_scan_markdown(result))
     return 0
 
 
@@ -577,6 +619,21 @@ def build_parser() -> argparse.ArgumentParser:
         help="When using --mode precise, include weak matches in a separate section",
     )
     p_search.set_defaults(func=cmd_search)
+
+    p_scan = sub.add_parser("scan", help="Fast headline signal scan for a watchlist topic or free-form query")
+    subject = p_scan.add_mutually_exclusive_group(required=True)
+    subject.add_argument("--topic", type=str, help="Watchlist topic name")
+    subject.add_argument("--query", type=str, help="Free-form headline query")
+    p_scan.add_argument("--since", type=str, default="6h", help="Lookback window such as 2h, 24h, or 7d")
+    p_scan.add_argument("--max-items", type=int, default=50, help="Maximum signals/items to return")
+    p_scan.add_argument("--source", type=str, default="rss", help="Comma-separated sources: rss, google_news_rss, gdelt")
+    p_scan.add_argument("--min-confidence", choices=("low", "medium", "high"), default="low", help="Minimum signal tier")
+    p_scan.add_argument("--only-new", action="store_true", default=True, help="Hide items already shown by prior scans")
+    p_scan.add_argument("--show-seen", action="store_true", help="Show items already returned by prior scans")
+    p_scan.add_argument("--format", choices=("markdown",), default="markdown", help="Output format")
+    p_scan.add_argument("--max-queries", type=int, default=1, help="Maximum GDELT/Google query plans to use")
+    p_scan.add_argument("--use-cache-first", action="store_true", help="Prefer fresh cached GDELT results")
+    p_scan.set_defaults(func=cmd_scan)
 
     p_digest = sub.add_parser("digest", help="Generate markdown digest for a topic")
     p_digest.add_argument("--topic", required=True, type=str, help="Topic name or query")
