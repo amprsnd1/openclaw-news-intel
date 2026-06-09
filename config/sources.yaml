@@ -1,124 +1,794 @@
 sources:
-  - name: BBC
-    type: newspaper
-    adapter: rss
-    url: https://feeds.bbci.co.uk/news/world/rss.xml
-    language: en
-    region: global
-    country: UK
-    access_mode: rss
-    enabled: true
-
-  - name: The Guardian
-    type: newspaper
-    adapter: rss
-    url: https://www.theguardian.com/world/rss
-    language: en
-    region: global
-    country: UK
-    access_mode: rss
-    enabled: true
-
-  - name: Politico EU
-    type: newspaper
-    adapter: rss
-    url: https://www.politico.eu/feed/
-    language: en
-    region: eu
-    country: EU
-    access_mode: rss
-    enabled: true
-
-  - name: AP News
-    type: wire
-    adapter: rss
-    url: https://apnews.com/hub/apf-topnews?output=1
-    language: en
-    region: global
-    country: US
-    access_mode: public
-    enabled: false
-
-  - name: Der Spiegel
-    type: newspaper
-    adapter: rss
-    url: https://www.spiegel.de/international/index.rss
-    language: en
-    region: eu
-    country: DE
-    access_mode: rss
-    enabled: false
-
-  - name: Le Monde
-    type: newspaper
-    adapter: rss
-    url: https://www.lemonde.fr/en/rss/une.xml
-    language: en
-    region: eu
-    country: FR
-    access_mode: rss
-    enabled: false
-
-  - name: Reuters
-    type: wire
-    adapter: gdelt
-    url: metadata-only
-    language: en
-    region: global
-    country: US
-    country_code: us
-    domains: [reuters.com]
-    access_mode: metadata_only
-    gdelt_timeout_seconds: 15
-    gdelt_max_retries: 2
-    gdelt_retry_wait_seconds: 5
-    enabled: true
-
-  - name: Bloomberg
-    type: wire
-    adapter: gdelt
-    url: metadata-only
-    language: en
-    region: global
-    country: US
-    country_code: us
-    domains: [bloomberg.com]
-    access_mode: metadata_only
-    gdelt_timeout_seconds: 15
-    gdelt_max_retries: 2
-    gdelt_retry_wait_seconds: 5
-    enabled: true
-
-  - name: Financial Times
-    type: newspaper
-    adapter: gdelt
-    url: metadata-only
-    language: en
-    region: global
-    country: UK
-    country_code: uk
-    domains: [ft.com]
-    access_mode: metadata_only
-    gdelt_timeout_seconds: 15
-    gdelt_max_retries: 2
-    gdelt_retry_wait_seconds: 5
-    enabled: true
-
-  - name: Wall Street Journal
-    type: newspaper
-    adapter: gdelt
-    url: metadata-only
-    language: en
-    region: global
-    country: US
-    country_code: us
-    domains: [wsj.com]
-    access_mode: metadata_only
-    gdelt_timeout_seconds: 15
-    gdelt_max_retries: 2
-    gdelt_retry_wait_seconds: 5
-    enabled: true
-
+- name: BBC
+  type: newspaper
+  adapter: rss
+  url: https://feeds.bbci.co.uk/news/world/rss.xml
+  language: en
+  region: global
+  country: UK
+  access_mode: rss
+  enabled: true
+- name: The Guardian
+  type: newspaper
+  adapter: rss
+  url: https://www.theguardian.com/world/rss
+  language: en
+  region: global
+  country: UK
+  access_mode: rss
+  enabled: true
+- name: Politico EU
+  type: newspaper
+  adapter: rss
+  url: https://www.politico.eu/feed/
+  language: en
+  region: eu
+  country: EU
+  access_mode: rss
+  enabled: true
+- name: AP News
+  type: wire
+  adapter: rss
+  url: https://apnews.com/hub/apf-topnews?output=1
+  language: en
+  region: global
+  country: US
+  access_mode: public
+  enabled: false
+- name: Der Spiegel
+  type: newspaper
+  adapter: rss
+  url: https://www.spiegel.de/international/index.rss
+  language: en
+  region: eu
+  country: DE
+  access_mode: rss
+  enabled: false
+- name: Le Monde
+  type: newspaper
+  adapter: rss
+  url: https://www.lemonde.fr/en/rss/une.xml
+  language: en
+  region: eu
+  country: FR
+  access_mode: rss
+  enabled: false
+- id: european_commission
+  name: European Commission Press Corner
+  type: official
+  category: official_eu
+  adapter: rss
+  url: https://ec.europa.eu/commission/presscorner/api/rss
+  language: en
+  region: eu
+  country: EU
+  access_mode: public
+  enabled: true
+- id: european_commission_news
+  name: European Commission News
+  type: official
+  category: official_eu
+  adapter: rss
+  url: https://commission.europa.eu/node/2/rss_en
+  language: en
+  region: eu
+  country: EU
+  access_mode: public
+  enabled: true
+- id: uk_mod
+  name: UK Ministry of Defence
+  type: official
+  category: official_defense
+  adapter: rss
+  url: https://www.gov.uk/search/news-and-communications.atom?organisations[]=ministry-of-defence
+  language: en
+  region: uk
+  country: UK
+  access_mode: public
+  enabled: true
+- id: nato
+  name: NATO
+  type: official
+  category: official_defense
+  adapter: rss
+  url: roadmap-no-stable-feed
+  language: en
+  region: transatlantic
+  country: NATO
+  access_mode: public
+  source_type: rss_or_public_feed
+  status: roadmap_no_stable_feed
+  enabled: false
+- id: european_council
+  name: European Council
+  type: official
+  category: official_eu
+  adapter: rss
+  url: roadmap-no-stable-feed
+  language: en
+  region: eu
+  country: EU
+  access_mode: public
+  source_type: rss_or_public_feed
+  status: roadmap_no_stable_feed
+  enabled: false
+- id: eeas
+  name: European External Action Service
+  type: official
+  category: official_eu
+  adapter: rss
+  url: roadmap-no-stable-feed
+  language: en
+  region: eu
+  country: EU
+  access_mode: public
+  source_type: rss_or_public_feed
+  status: roadmap_no_stable_feed
+  enabled: false
+- id: european_defence_agency
+  name: European Defence Agency
+  type: official
+  category: official_eu
+  adapter: rss
+  url: roadmap-no-stable-feed
+  language: en
+  region: eu
+  country: EU
+  access_mode: public
+  source_type: rss_or_public_feed
+  status: roadmap_no_stable_feed
+  enabled: false
+- id: gov_pl_defense
+  name: Polish Ministry of National Defence
+  type: official
+  category: official_defense
+  adapter: rss
+  url: roadmap-no-stable-feed
+  language: en
+  region: eu
+  country: PL
+  access_mode: public
+  source_type: rss_or_public_feed
+  status: roadmap_no_stable_feed
+  enabled: false
+- id: bundeswehr
+  name: Bundeswehr / German Defence
+  type: official
+  category: official_defense
+  adapter: rss
+  url: roadmap-no-stable-feed
+  language: de
+  region: eu
+  country: DE
+  access_mode: public
+  source_type: rss_or_public_feed
+  status: roadmap_no_stable_feed
+  enabled: false
+- id: france_defense_ministry
+  name: French Ministry of Armed Forces
+  type: official
+  category: official_defense
+  adapter: rss
+  url: roadmap-no-stable-feed
+  language: fr
+  region: eu
+  country: FR
+  access_mode: public
+  source_type: rss_or_public_feed
+  status: roadmap_no_stable_feed
+  enabled: false
+- id: defense_news
+  name: Defense News
+  type: specialist
+  category: defense_specialist
+  adapter: rss
+  url: https://www.defensenews.com/arc/outboundfeeds/rss/
+  language: en
+  region: global
+  country: US
+  access_mode: public
+  enabled: true
+- id: breaking_defense
+  name: Breaking Defense
+  type: specialist
+  category: defense_specialist
+  adapter: rss
+  url: https://breakingdefense.com/feed/
+  language: en
+  region: global
+  country: US
+  access_mode: public
+  enabled: true
+- id: defense_one
+  name: Defense One
+  type: specialist
+  category: defense_specialist
+  adapter: rss
+  url: https://www.defenseone.com/rss/all/
+  language: en
+  region: global
+  country: US
+  access_mode: public
+  enabled: true
+- id: naval_news
+  name: Naval News
+  type: specialist
+  category: defense_specialist
+  adapter: rss
+  url: https://www.navalnews.com/feed/
+  language: en
+  region: global
+  country: FR
+  access_mode: public
+  enabled: true
+- id: the_war_zone
+  name: The War Zone
+  type: specialist
+  category: defense_specialist
+  adapter: rss
+  url: https://www.twz.com/feed
+  language: en
+  region: global
+  country: US
+  access_mode: public
+  enabled: true
+- id: army_technology
+  name: Army Technology
+  type: specialist
+  category: defense_specialist
+  adapter: rss
+  url: https://www.army-technology.com/feed/
+  language: en
+  region: global
+  country: UK
+  access_mode: public
+  enabled: true
+- id: air_and_space_forces
+  name: Air & Space Forces Magazine
+  type: specialist
+  category: defense_specialist
+  adapter: rss
+  url: https://www.airandspaceforces.com/feed/
+  language: en
+  region: global
+  country: US
+  access_mode: public
+  enabled: true
+- id: war_on_the_rocks
+  name: War on the Rocks
+  type: specialist
+  category: defense_specialist
+  adapter: rss
+  url: https://warontherocks.com/feed/
+  language: en
+  region: global
+  country: US
+  access_mode: public_or_partial
+  enabled: true
+- id: csis
+  name: CSIS
+  type: think_tank
+  category: defense_specialist
+  adapter: rss
+  url: https://www.csis.org/rss.xml
+  language: en
+  region: global
+  country: US
+  access_mode: public
+  enabled: true
+- id: atlantic_council
+  name: Atlantic Council
+  type: think_tank
+  category: defense_specialist
+  adapter: rss
+  url: https://www.atlanticcouncil.org/feed/
+  language: en
+  region: global
+  country: US
+  access_mode: public
+  enabled: true
+- id: rusi
+  name: RUSI
+  type: think_tank
+  category: defense_specialist
+  adapter: rss
+  url: roadmap-no-stable-feed
+  language: en
+  region: global
+  country: UK
+  access_mode: public_or_partial
+  source_type: rss_or_public_feed
+  status: roadmap_no_stable_feed
+  enabled: false
+- id: jamestown_foundation
+  name: Jamestown Foundation
+  type: think_tank
+  category: defense_specialist
+  adapter: rss
+  url: roadmap-no-stable-feed
+  language: en
+  region: global
+  country: US
+  access_mode: public
+  source_type: rss_or_public_feed
+  status: roadmap_no_stable_feed
+  enabled: false
+- id: dw
+  name: Deutsche Welle
+  type: newspaper
+  category: european_local
+  adapter: rss
+  url: https://rss.dw.com/xml/rss-en-all
+  language: en
+  region: eu
+  country: DE
+  access_mode: public
+  enabled: true
+- id: france24
+  name: France 24
+  type: newspaper
+  category: european_local
+  adapter: rss
+  url: https://www.france24.com/en/rss
+  language: en
+  region: eu
+  country: FR
+  access_mode: public
+  enabled: true
+- id: euronews
+  name: Euronews
+  type: newspaper
+  category: european_local
+  adapter: rss
+  url: https://www.euronews.com/rss
+  language: en
+  region: eu
+  country: EU
+  access_mode: public
+  enabled: true
+- id: notes_from_poland
+  name: Notes from Poland
+  type: newspaper
+  category: european_local
+  adapter: rss
+  url: https://notesfrompoland.com/feed/
+  language: en
+  region: eu
+  country: PL
+  access_mode: public
+  enabled: true
+- id: err_estonia
+  name: ERR Estonia
+  type: newspaper
+  category: european_local
+  adapter: rss
+  url: https://news.err.ee/rss
+  language: en
+  region: eu
+  country: EE
+  access_mode: public
+  enabled: true
+- id: lsm_latvia
+  name: LSM Latvia
+  type: newspaper
+  category: european_local
+  adapter: rss
+  url: https://eng.lsm.lv/rss/
+  language: en
+  region: eu
+  country: LV
+  access_mode: public
+  enabled: true
+- id: balkan_insight
+  name: Balkan Insight
+  type: newspaper
+  category: european_local
+  adapter: rss
+  url: https://balkaninsight.com/feed/
+  language: en
+  region: eu
+  country: EU
+  access_mode: public_or_partial
+  enabled: true
+- id: euractiv
+  name: Euractiv
+  type: newspaper
+  category: european_local
+  adapter: rss
+  url: roadmap-no-stable-feed
+  language: en
+  region: eu
+  country: EU
+  access_mode: public
+  source_type: rss_or_public_feed
+  status: roadmap_no_stable_feed
+  enabled: false
+- id: kyiv_independent
+  name: Kyiv Independent
+  type: newspaper
+  category: european_local
+  adapter: rss
+  url: roadmap-no-stable-feed
+  language: en
+  region: eu
+  country: UA
+  access_mode: public
+  source_type: rss_or_public_feed
+  status: roadmap_no_stable_feed
+  enabled: false
+- id: tvp_world
+  name: TVP World
+  type: newspaper
+  category: european_local
+  adapter: rss
+  url: roadmap-no-stable-feed
+  language: en
+  region: eu
+  country: PL
+  access_mode: public
+  source_type: rss_or_public_feed
+  status: roadmap_no_stable_feed
+  enabled: false
+- id: yle
+  name: YLE Finland
+  type: newspaper
+  category: european_local
+  adapter: rss
+  url: roadmap-no-stable-feed
+  language: en
+  region: eu
+  country: FI
+  access_mode: public
+  source_type: rss_or_public_feed
+  status: roadmap_no_stable_feed
+  enabled: false
+- id: lrt_lithuania
+  name: LRT Lithuania
+  type: newspaper
+  category: european_local
+  adapter: rss
+  url: roadmap-no-stable-feed
+  language: en
+  region: eu
+  country: LT
+  access_mode: public
+  source_type: rss_or_public_feed
+  status: roadmap_no_stable_feed
+  enabled: false
+- id: investing_news
+  name: Investing.com News
+  type: financial
+  category: market_signals
+  adapter: rss
+  url: https://www.investing.com/rss/news.rss
+  language: en
+  region: global
+  country: US
+  access_mode: public
+  enabled: true
+- id: marketwatch
+  name: MarketWatch
+  type: financial
+  category: market_signals
+  adapter: rss
+  url: https://feeds.marketwatch.com/marketwatch/topstories/
+  language: en
+  region: global
+  country: US
+  access_mode: public_or_partial
+  enabled: true
+- id: yahoo_finance
+  name: Yahoo Finance
+  type: financial
+  category: market_signals
+  adapter: rss
+  url: https://finance.yahoo.com/news/rssindex
+  language: en
+  region: global
+  country: US
+  access_mode: public
+  enabled: true
+- id: st_louis_fed
+  name: St. Louis Fed / FRED
+  type: official
+  category: official_financial
+  adapter: rss
+  url: https://fredblog.stlouisfed.org/feed/
+  language: en
+  region: us
+  country: US
+  access_mode: public
+  enabled: true
+- id: ecb
+  name: European Central Bank
+  type: official
+  category: official_financial
+  adapter: rss
+  url: https://www.ecb.europa.eu/rss/press.html
+  language: en
+  region: eu
+  country: EU
+  access_mode: public
+  enabled: true
+- id: bank_of_england
+  name: Bank of England
+  type: official
+  category: official_financial
+  adapter: rss
+  url: https://www.bankofengland.co.uk/rss/news
+  language: en
+  region: uk
+  country: UK
+  access_mode: public
+  enabled: true
+- id: nasdaq_news
+  name: Nasdaq News
+  type: financial
+  category: market_signals
+  adapter: rss
+  url: roadmap-no-stable-feed
+  language: en
+  region: global
+  country: US
+  access_mode: public
+  source_type: rss_or_public_feed
+  status: roadmap_no_stable_feed
+  enabled: false
+- id: cme_group
+  name: CME Group
+  type: financial
+  category: market_signals
+  adapter: rss
+  url: roadmap-no-stable-feed
+  language: en
+  region: global
+  country: US
+  access_mode: public
+  source_type: rss_or_public_feed
+  status: roadmap_no_stable_feed
+  enabled: false
+- id: ice
+  name: ICE
+  type: financial
+  category: market_signals
+  adapter: rss
+  url: roadmap-no-stable-feed
+  language: en
+  region: global
+  country: US
+  access_mode: public
+  source_type: rss_or_public_feed
+  status: roadmap_no_stable_feed
+  enabled: false
+- id: us_treasury
+  name: US Treasury
+  type: official
+  category: official_financial
+  adapter: rss
+  url: roadmap-no-stable-feed
+  language: en
+  region: us
+  country: US
+  access_mode: public
+  source_type: rss_or_public_feed
+  status: roadmap_no_stable_feed
+  enabled: false
+- id: uk_dmo
+  name: UK Debt Management Office
+  type: official
+  category: official_financial
+  adapter: rss
+  url: roadmap-no-stable-feed
+  language: en
+  region: uk
+  country: UK
+  access_mode: public
+  source_type: rss_or_public_feed
+  status: roadmap_no_stable_feed
+  enabled: false
+- id: european_commission_economy
+  name: European Commission Economy and Finance
+  type: official
+  category: official_financial
+  adapter: rss
+  url: roadmap-no-stable-feed
+  language: en
+  region: eu
+  country: EU
+  access_mode: public
+  source_type: rss_or_public_feed
+  status: roadmap_no_stable_feed
+  enabled: false
+- id: eurostat
+  name: Eurostat
+  type: official
+  category: official_financial
+  adapter: rss
+  url: roadmap-no-stable-feed
+  language: en
+  region: eu
+  country: EU
+  access_mode: public
+  source_type: rss_or_public_feed
+  status: roadmap_no_stable_feed
+  enabled: false
+- name: Reuters
+  type: wire
+  adapter: gdelt
+  url: metadata-only
+  language: en
+  region: global
+  country: US
+  country_code: us
+  domains:
+  - reuters.com
+  access_mode: metadata_only
+  gdelt_timeout_seconds: 15
+  gdelt_max_retries: 2
+  gdelt_retry_wait_seconds: 5
+  enabled: true
+- name: Bloomberg
+  type: wire
+  adapter: gdelt
+  url: metadata-only
+  language: en
+  region: global
+  country: US
+  country_code: us
+  domains:
+  - bloomberg.com
+  access_mode: metadata_only
+  gdelt_timeout_seconds: 15
+  gdelt_max_retries: 2
+  gdelt_retry_wait_seconds: 5
+  enabled: true
+- name: Financial Times
+  type: newspaper
+  adapter: gdelt
+  url: metadata-only
+  language: en
+  region: global
+  country: UK
+  country_code: uk
+  domains:
+  - ft.com
+  access_mode: metadata_only
+  gdelt_timeout_seconds: 15
+  gdelt_max_retries: 2
+  gdelt_retry_wait_seconds: 5
+  enabled: true
+- name: Wall Street Journal
+  type: newspaper
+  adapter: gdelt
+  url: metadata-only
+  language: en
+  region: global
+  country: US
+  country_code: us
+  domains:
+  - wsj.com
+  access_mode: metadata_only
+  gdelt_timeout_seconds: 15
+  gdelt_max_retries: 2
+  gdelt_retry_wait_seconds: 5
+  enabled: true
+- id: estonia_defense
+  name: Estonian Ministry of Defence
+  type: official
+  category: official_defense
+  adapter: rss
+  url: roadmap-no-stable-feed
+  language: en
+  region: eu
+  country: EE
+  access_mode: public
+  source_type: rss_or_public_feed
+  status: roadmap_no_stable_feed
+  enabled: false
+- id: latvia_defense
+  name: Latvian Ministry of Defence
+  type: official
+  category: official_defense
+  adapter: rss
+  url: roadmap-no-stable-feed
+  language: en
+  region: eu
+  country: LV
+  access_mode: public
+  source_type: rss_or_public_feed
+  status: roadmap_no_stable_feed
+  enabled: false
+- id: lithuania_defense
+  name: Lithuanian Ministry of Defence
+  type: official
+  category: official_defense
+  adapter: rss
+  url: roadmap-no-stable-feed
+  language: en
+  region: eu
+  country: LT
+  access_mode: public
+  source_type: rss_or_public_feed
+  status: roadmap_no_stable_feed
+  enabled: false
+- id: finland_defense
+  name: Finnish Ministry of Defence
+  type: official
+  category: official_defense
+  adapter: rss
+  url: roadmap-no-stable-feed
+  language: en
+  region: eu
+  country: FI
+  access_mode: public
+  source_type: rss_or_public_feed
+  status: roadmap_no_stable_feed
+  enabled: false
+- id: sweden_defense
+  name: Swedish Ministry of Defence
+  type: official
+  category: official_defense
+  adapter: rss
+  url: roadmap-no-stable-feed
+  language: en
+  region: eu
+  country: SE
+  access_mode: public
+  source_type: rss_or_public_feed
+  status: roadmap_no_stable_feed
+  enabled: false
+- id: romania_defense
+  name: Romanian Ministry of Defence
+  type: official
+  category: official_defense
+  adapter: rss
+  url: roadmap-no-stable-feed
+  language: en
+  region: eu
+  country: RO
+  access_mode: public
+  source_type: rss_or_public_feed
+  status: roadmap_no_stable_feed
+  enabled: false
+- id: european_parliament
+  name: European Parliament
+  type: official
+  category: official_eu
+  adapter: rss
+  url: roadmap-no-stable-feed
+  language: en
+  region: eu
+  country: EU
+  access_mode: public
+  source_type: rss_or_public_feed
+  status: roadmap_no_stable_feed
+  enabled: false
+- id: imf
+  name: International Monetary Fund
+  type: official
+  category: official_financial
+  adapter: rss
+  url: roadmap-no-stable-feed
+  language: en
+  region: global
+  country: GLOBAL
+  access_mode: public
+  source_type: rss_or_public_feed
+  status: roadmap_no_stable_feed
+  enabled: false
+- id: world_bank
+  name: World Bank
+  type: official
+  category: official_financial
+  adapter: rss
+  url: roadmap-no-stable-feed
+  language: en
+  region: global
+  country: GLOBAL
+  access_mode: public
+  source_type: rss_or_public_feed
+  status: roadmap_no_stable_feed
+  enabled: false
 gdelt:
   enabled: true
   max_queries_per_topic: 2
@@ -129,19 +799,116 @@ gdelt:
   cache_ttl_minutes: 180
   min_delay_between_queries_seconds: 15
   stop_on_first_rate_limit: true
-
+google_news_rss:
+  enabled: true
+  max_queries_per_topic: 3
+  max_items_per_query: 20
+  timeout_seconds: 15
+  cache_ttl_minutes: 60
+  user_agent: news-intel local research tool
+source_quality:
+  official_defense: high
+  official_eu: high
+  official_financial: high
+  defense_specialist: high
+  market_signals: high
+  google_news_rss: medium
+  european_local: medium
+  fast_headlines: medium
+  rss: medium
+  gdelt: medium
+  generic_rss: low
 source_groups:
-  fast_news:
-    - BBC
-    - The Guardian
-    - Politico EU
-    - AP News
-    - Der Spiegel
-    - Le Monde
-
+  fast_headlines:
+    description: Broad fast headline discovery sources.
+    sources:
+    - rss
+    - google_news_rss
+  official_defense:
+    description: Official defense, military, NATO, and ministry sources.
+    sources:
+    - nato
+    - uk_mod
+    - gov_pl_defense
+    - bundeswehr
+    - france_defense_ministry
+    - estonia_defense
+    - latvia_defense
+    - lithuania_defense
+    - finland_defense
+    - sweden_defense
+    - romania_defense
+  official_eu:
+    description: Official EU institutional and foreign/security policy sources.
+    sources:
+    - european_commission
+    - european_council
+    - eeas
+    - european_defence_agency
+    - european_parliament
+  official_financial:
+    description: Official macro, fiscal, rates, debt, and statistical sources.
+    sources:
+    - ecb
+    - bank_of_england
+    - uk_dmo
+    - us_treasury
+    - st_louis_fed
+    - eurostat
+    - imf
+    - world_bank
+    - european_commission_economy
+  defense_specialist:
+    description: Specialist defense and security media.
+    sources:
+    - defense_news
+    - breaking_defense
+    - defense_one
+    - naval_news
+    - the_war_zone
+    - army_technology
+    - air_and_space_forces
+    - war_on_the_rocks
+    - rusi
+    - csis
+    - atlantic_council
+    - jamestown_foundation
+  european_local:
+    description: European local, national, and regional media useful for early signals.
+    sources:
+    - dw
+    - france24
+    - euractiv
+    - euronews
+    - kyiv_independent
+    - notes_from_poland
+    - tvp_world
+    - yle
+    - err_estonia
+    - lsm_latvia
+    - lrt_lithuania
+    - balkan_insight
+  market_signals:
+    description: Market, macro, trade, commodities, and financial headline sources.
+    sources:
+    - investing_news
+    - marketwatch
+    - yahoo_finance
+    - nasdaq_news
+    - cme_group
+    - ice
+    - st_louis_fed
+    - ecb
+    - bank_of_england
+    - us_treasury
+    - uk_dmo
+    - european_commission_economy
+    - eurostat
+    - imf
+    - world_bank
 official_source_roadmap:
-  - NATO public news and press feeds
-  - European Commission Press Corner RSS/API where available
-  - European Council public news feeds
-  - European Defence Agency public updates
-  - Selected national defense ministry RSS/API endpoints where stable
+- NATO public news and press feeds
+- European Commission Press Corner RSS/API where available
+- European Council public news feeds
+- European Defence Agency public updates
+- Selected national defense ministry RSS/API endpoints where stable

@@ -15,6 +15,8 @@ from .storage import Storage
 
 SIGNAL_RANK = {"high_signal": 3, "medium_signal": 2, "low_signal": 1, "noise": 0}
 MIN_CONFIDENCE_RANK = {"low": 1, "medium": 2, "high": 3}
+SOURCE_QUALITY_RANK = {"low": 1, "medium": 2, "high": 3}
+VIRTUAL_SCAN_SOURCES = {"rss", "google_news_rss", "gdelt"}
 
 NOISE_HINTS = {
     "sport",
@@ -36,6 +38,14 @@ SCAN_TERM_ALIASES = {
     "europe_ru_war_preparations": {
         "core": ["troops", "military deployment"],
         "event": ["deploys troops", "troop deployment"],
+    }
+}
+
+SCAN_WEAK_CORE_TERMS = {
+    "europe_ru_war_preparations": {
+        "shadow fleet",
+        "sanctions enforcement",
+        "sanctions",
     }
 }
 
@@ -128,6 +138,8 @@ def classify_signal(article: Dict[str, Any], watchlist: Dict[str, Any] | None = 
     matched_financial = match_terms_in_fields(fields, terms["financial"])
     matched_all = sorted(set(matched_context + matched_core + matched_event + matched_financial))
 
+    source_quality = str(article.get("source_quality") or "medium").lower()
+
     if not watchlist:
         query_terms = [str(t).lower() for t in (query or "").split() if t]
         matched = match_terms_in_fields(fields, query_terms)
@@ -146,6 +158,9 @@ def classify_signal(article: Dict[str, Any], watchlist: Dict[str, Any] | None = 
             why = "Only one query term matched; useful only as an adjacent signal."
             if only in GENERIC_CONTEXT_TERMS:
                 why = "Only one generic context term matched."
+        if signal == "medium_signal" and source_quality == "high":
+            signal = "high_signal"
+            why += " High-quality source increased signal priority."
         return {
             "signal_class": signal,
             "matched_terms": sorted(set(matched)),
@@ -156,9 +171,15 @@ def classify_signal(article: Dict[str, Any], watchlist: Dict[str, Any] | None = 
             "why": why,
         }
 
+    watchlist_name = (watchlist.get("name") or "").strip().lower()
+    weak_core_only = bool(matched_core) and set(matched_core).issubset(SCAN_WEAK_CORE_TERMS.get(watchlist_name, set()))
+
     if not matched_all:
         signal = "noise"
         why = "No watchlist terms matched headline metadata."
+    elif weak_core_only and not (matched_event or matched_financial):
+        signal = "low_signal"
+        why = "Matched weak sanctions/shadow-fleet terms without concrete readiness, procurement, deployment, or infrastructure signal."
     elif matched_context and (matched_event or matched_financial):
         signal = "high_signal"
         why = "Matched watchlist context plus event or policy trigger in headline metadata."
@@ -174,6 +195,13 @@ def classify_signal(article: Dict[str, Any], watchlist: Dict[str, Any] | None = 
     else:
         signal = "noise"
         why = "No relevant signal found."
+
+    if signal == "medium_signal" and source_quality == "high" and not weak_core_only:
+        signal = "high_signal"
+        why += " High-quality source increased signal priority."
+    elif signal == "low_signal" and source_quality == "high" and matched_context and (matched_core or matched_event or matched_financial) and not weak_core_only:
+        signal = "medium_signal"
+        why += " High-quality source increased adjacent signal priority."
 
     return {
         "signal_class": signal,
@@ -242,8 +270,12 @@ def _dedupe_candidates(candidates: List[Dict[str, Any]]) -> List[Dict[str, Any]]
     return unique
 
 
-def _google_news_items(query: str, max_items: int) -> List[Dict[str, Any]]:
-    parsed = feedparser.parse(GOOGLE_NEWS_RSS_URL.format(query=quote_plus(query)))
+def _google_news_items(query: str, max_items: int, config: Dict[str, Any] | None = None) -> List[Dict[str, Any]]:
+    cfg = config or {}
+    parsed = feedparser.parse(
+        GOOGLE_NEWS_RSS_URL.format(query=quote_plus(query)),
+        request_headers={"User-Agent": str(cfg.get("user_agent", "news-intel local research tool"))},
+    )
     items: List[Dict[str, Any]] = []
     for entry in parsed.entries[:max_items]:
         source = "Google News RSS"
@@ -304,6 +336,127 @@ def _source_status_template(sources: Iterable[str]) -> Dict[str, str]:
     return statuses
 
 
+def _source_key(value: str) -> str:
+    return (value or "").strip().lower().replace(" ", "_").replace("/", "_")
+
+
+def _source_matches_ref(source_cfg: Dict[str, Any], ref: str) -> bool:
+    key = _source_key(ref)
+    return key in {
+        _source_key(str(source_cfg.get("id", ""))),
+        _source_key(str(source_cfg.get("name", ""))),
+        _source_key(str(source_cfg.get("category", ""))),
+    }
+
+
+def resolve_scan_sources(
+    requested: str | None,
+    sources_cfg: List[Dict[str, Any]],
+    source_groups: Dict[str, Dict[str, Any]] | None = None,
+) -> Dict[str, Any]:
+    groups = source_groups or {}
+    source_refs = [s.strip() for s in (requested or "rss").split(",") if s.strip()] or ["rss"]
+    virtual_sources: set[str] = set()
+    selected_ids: set[str] = set()
+    selected_rss: List[Dict[str, Any]] = []
+    unknown: List[str] = []
+    group_counts: Dict[str, Dict[str, int]] = {}
+
+    def add_rss_source(source_cfg: Dict[str, Any]) -> None:
+        if not source_cfg.get("enabled", True):
+            return
+        if source_cfg.get("adapter", "rss") != "rss":
+            return
+        sid = _source_key(str(source_cfg.get("id") or source_cfg.get("name")))
+        if sid in selected_ids:
+            return
+        selected_ids.add(sid)
+        selected_rss.append(source_cfg)
+
+    def group_ref_enabled(group_ref: str) -> bool:
+        group_key = _source_key(group_ref)
+        if group_key in {"google_news_rss", "gdelt"}:
+            return True
+        if group_key == "rss":
+            return any(
+                source_cfg.get("enabled", True) and source_cfg.get("adapter", "rss") == "rss"
+                for source_cfg in sources_cfg
+            )
+        return any(
+            _source_matches_ref(source_cfg, group_ref)
+            and source_cfg.get("enabled", True)
+            and source_cfg.get("adapter", "rss") == "rss"
+            for source_cfg in sources_cfg
+        )
+
+    for ref in source_refs:
+        key = _source_key(ref)
+        if key in VIRTUAL_SCAN_SOURCES:
+            virtual_sources.add(key)
+            if key == "rss":
+                for source_cfg in sources_cfg:
+                    add_rss_source(source_cfg)
+            continue
+        if key in groups:
+            group_refs = [str(group_ref) for group_ref in groups[key].get("sources", [])]
+            for group_ref in group_refs:
+                group_key = _source_key(str(group_ref))
+                if group_key in VIRTUAL_SCAN_SOURCES:
+                    virtual_sources.add(group_key)
+                    if group_key == "rss":
+                        for source_cfg in sources_cfg:
+                            add_rss_source(source_cfg)
+                    continue
+                matched = False
+                for source_cfg in sources_cfg:
+                    if _source_matches_ref(source_cfg, str(group_ref)):
+                        add_rss_source(source_cfg)
+                        matched = True
+                if not matched and group_key not in VIRTUAL_SCAN_SOURCES:
+                    continue
+            group_counts[key] = {
+                "configured": len(group_refs),
+                "enabled": sum(1 for group_ref in group_refs if group_ref_enabled(group_ref)),
+            }
+            continue
+        matched_direct = False
+        for source_cfg in sources_cfg:
+            if _source_matches_ref(source_cfg, ref):
+                add_rss_source(source_cfg)
+                matched_direct = True
+        if not matched_direct:
+            unknown.append(ref)
+
+    if unknown:
+        available = sorted(set(list(groups.keys()) + list(VIRTUAL_SCAN_SOURCES)))
+        raise ValueError(f"Unknown scan source/group: {', '.join(unknown)}. Available source groups: {', '.join(available)}")
+
+    return {
+        "requested": [_source_key(r) for r in source_refs],
+        "virtual_sources": virtual_sources,
+        "rss_sources": selected_rss,
+        "group_counts": group_counts,
+    }
+
+
+def _quality_for_source(source_cfg: Dict[str, Any], source_quality: Dict[str, str] | None) -> str:
+    quality = source_quality or {}
+    category = _source_key(str(source_cfg.get("category", "")))
+    source_id = _source_key(str(source_cfg.get("id", "")))
+    adapter = _source_key(str(source_cfg.get("adapter", "")))
+    return quality.get(category) or quality.get(source_id) or quality.get(adapter) or quality.get("generic_rss", "low")
+
+
+def _cache_is_fresh(fetched_at: str, ttl_minutes: int) -> bool:
+    try:
+        fetched = datetime.fromisoformat(str(fetched_at).replace("Z", "+00:00"))
+        if fetched.tzinfo is None:
+            fetched = fetched.replace(tzinfo=timezone.utc)
+    except Exception:
+        return False
+    return datetime.now(timezone.utc) - fetched.astimezone(timezone.utc) <= timedelta(minutes=ttl_minutes)
+
+
 def run_scan(
     storage: Storage,
     sources_cfg: List[Dict[str, Any]],
@@ -311,28 +464,40 @@ def run_scan(
     query: str | None,
     since: str = "6h",
     max_items: int = 50,
-    sources: str = "rss",
+    sources: str | None = None,
     min_confidence: str = "low",
     only_new: bool = True,
     show_seen: bool = False,
     max_queries: int = 1,
     use_cache_first: bool = False,
     gdelt_config: Dict[str, Any] | None = None,
+    google_news_config: Dict[str, Any] | None = None,
+    source_groups: Dict[str, Dict[str, Any]] | None = None,
+    source_quality: Dict[str, str] | None = None,
 ) -> Dict[str, Any]:
     since_dt, since_label, _ = parse_since_window(since)
-    source_list = [s.strip().lower() for s in sources.split(",") if s.strip()]
-    if not source_list:
-        source_list = ["rss"]
+    default_sources_used = False
+    if sources is None and watchlist and watchlist.get("default_scan_sources"):
+        sources = ",".join(str(item) for item in watchlist.get("default_scan_sources") or [])
+        default_sources_used = True
+    if sources is None:
+        sources = "rss"
+    resolved = resolve_scan_sources(sources, sources_cfg, source_groups=source_groups)
+    source_list = resolved["requested"]
+    virtual_sources = resolved["virtual_sources"]
+    rss_sources = resolved["rss_sources"]
 
     statuses = _source_status_template(source_list)
     warnings: List[str] = []
+    for group_name, counts in resolved.get("group_counts", {}).items():
+        if counts.get("enabled", 0) == 0:
+            warnings.append(f"{group_name} has no enabled live sources.")
     candidates: List[Dict[str, Any]] = []
     scanned_counts = {"rss": 0, "google_news_rss": 0, "gdelt": 0}
     topic_name = watchlist.get("name") if watchlist else None
     key = scan_key(topic_name, query, source_list, since_label)
 
-    if "rss" in source_list:
-        rss_sources = [s for s in sources_cfg if s.get("enabled", True) and s.get("adapter", "rss") == "rss"]
+    if rss_sources:
         try:
             for source_cfg in rss_sources:
                 raw_items = fetch_rss(source_cfg, max_items=max_items)
@@ -340,6 +505,8 @@ def run_scan(
                 for raw in raw_items:
                     stored = _store_candidate(storage, raw, source_cfg, "rss")
                     if stored and _is_recent(stored, since_dt):
+                        stored["source_quality"] = _quality_for_source(source_cfg, source_quality)
+                        stored["source_category"] = source_cfg.get("category", "rss")
                         candidates.append(stored)
             statuses["rss"] = "ok"
         except Exception as exc:
@@ -347,22 +514,40 @@ def run_scan(
             warnings.append(f"RSS scan warning: {exc}")
 
     query_plan = _queries_for_scan(watchlist, query, max_queries=max_queries)
-    if "google_news_rss" in source_list:
+    google_cfg = google_news_config or {}
+    google_query_limit = min(max_queries, int(google_cfg.get("max_queries_per_topic", 3)))
+    google_item_limit = min(max_items, int(google_cfg.get("max_items_per_query", 20)))
+    if "google_news_rss" in virtual_sources:
         try:
-            for item in query_plan[:max_queries]:
-                raw_items = _google_news_items(item["query"], max_items=max_items)
+            for item in query_plan[:google_query_limit]:
+                cache_key = f"google_news_rss:{item['query']}"
+                payload = None
+                cached = storage.get_gdelt_cache(cache_key)
+                if cached and _cache_is_fresh(cached.get("fetched_at", ""), int(google_cfg.get("cache_ttl_minutes", 60))):
+                    payload = cached.get("payload") or {}
+                    statuses["google_news_rss"] = "cache"
+                if payload is None:
+                    raw_items = _google_news_items(item["query"], max_items=google_item_limit, config=google_cfg)
+                    payload = {"articles": raw_items}
+                    storage.set_gdelt_cache(cache_key, utc_now_iso(), payload)
+                    if statuses.get("google_news_rss") != "cache":
+                        statuses["google_news_rss"] = "ok"
+                raw_items = payload.get("articles") or []
                 scanned_counts["google_news_rss"] += len(raw_items)
                 for raw in raw_items:
                     source_cfg = _source_cfg_for_article(raw, raw.get("source") or "Google News RSS", "public_metadata")
                     stored = _store_candidate(storage, raw, source_cfg, "google_news_rss", item["query"])
                     if stored and _is_recent(stored, since_dt):
+                        stored["source_quality"] = (source_quality or {}).get("google_news_rss", "medium")
+                        stored["source_category"] = "google_news_rss"
                         candidates.append(stored)
-            statuses["google_news_rss"] = "ok"
+            if statuses["google_news_rss"] == "pending":
+                statuses["google_news_rss"] = "ok"
         except Exception as exc:
             statuses["google_news_rss"] = "warning"
             warnings.append(f"Google News RSS scan warning: {exc}")
 
-    if "gdelt" in source_list:
+    if "gdelt" in virtual_sources:
         cfg = gdelt_config or {}
         ttl_minutes = int(cfg.get("cache_ttl_minutes", 180))
         try:
@@ -404,6 +589,8 @@ def run_scan(
                     source_cfg = _source_cfg_for_article(raw, raw.get("source") or "GDELT", raw.get("access_mode") or "public_metadata")
                     stored = _store_candidate(storage, raw, source_cfg, "gdelt", item["query"])
                     if stored and _is_recent(stored, since_dt):
+                        stored["source_quality"] = (source_quality or {}).get("gdelt", "medium")
+                        stored["source_category"] = "gdelt"
                         candidates.append(stored)
                 if idx < max_queries - 1 and int(cfg.get("min_delay_between_queries_seconds", 0)) > 0:
                     # scan defaults to conservative single-query use; multi-query pacing is handled by collect.
@@ -453,6 +640,8 @@ def run_scan(
         "query": query,
         "since": since_label,
         "sources": source_list,
+        "source_groups_used": source_list,
+        "default_sources_used": default_sources_used,
         "source_status": statuses,
         "warnings": warnings,
         "scanned_counts": scanned_counts,
@@ -477,6 +666,10 @@ def render_scan_markdown(result: Dict[str, Any]) -> str:
         f"New items scanned: {result.get('new_items_scanned', 0)}",
         f"Signals found: {len(signals)}",
     ]
+    if result.get("source_groups_used"):
+        lines.extend(["", "## Source Groups Used"])
+        for group in result.get("source_groups_used") or []:
+            lines.append(f"- {group}")
     if not high and not medium:
         lines.extend(
             [
@@ -499,6 +692,7 @@ def render_scan_markdown(result: Dict[str, Any]) -> str:
             lines.append(f"{idx}. [{row.get('title', 'Untitled')}]({row.get('url', '')})")
             lines.append(f"   Source: {row.get('source', '-')}")
             lines.append(f"   Time: {row.get('published_at', '-')}")
+            lines.append(f"   Source quality: {row.get('source_quality', '-')}")
             lines.append(f"   Matched terms: {matched}")
             lines.append(f"   Confidence: {row.get('signal_class')}")
             lines.append(f"   Why it matters: {row.get('why', '-')}")

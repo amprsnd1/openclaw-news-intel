@@ -124,6 +124,7 @@ export NEWS_PIPELINE_DB=data/news.sqlite
 
 ```bash
 news-intel sources
+news-intel source-groups
 news-intel stats
 ```
 
@@ -153,7 +154,26 @@ Optional headline discovery:
 news-intel scan --query "NATO Russia readiness eastern Europe" --since "24h" --source google_news_rss
 news-intel scan --topic "europe_ru_war_preparations" --since "6h" --source rss,google_news_rss
 news-intel scan --topic "europe_ru_war_preparations" --since "6h" --source rss,gdelt --max-queries 1 --use-cache-first
+news-intel scan --topic "europe_ru_war_preparations" --since "24h" --min-confidence medium
+news-intel scan --topic "global_trade_and_country_flows" --since "24h" --min-confidence medium
+news-intel scan --query "UK gilts debt issuance fiscal rules" --since "24h" --source market_signals,google_news_rss
 ```
+
+Source groups:
+- `news-intel source-health` reports configured/enabled/working sources and recent local item/signal counts without live network checks.
+- `fast_headlines`: RSS plus Google News RSS for broad headline discovery.
+- `official_defense`: public official NATO, military, and defense ministry feeds where stable; unstable official sources are disabled roadmap placeholders.
+- `official_eu`: public EU institutional and foreign/security policy feeds.
+- `official_financial`: public macro, fiscal, rates, debt, and statistical feeds.
+- `defense_specialist`: public specialist defense/security media feeds.
+- `european_local`: European local, national, and regional feeds useful for early signals.
+- `market_signals`: public market, macro, rates, trade, and financial headline feeds.
+
+Source policy:
+- Google News RSS is headline/metadata discovery only and is stored as `public_metadata` or `metadata_only`.
+- Official sources are only enabled when a stable public RSS/Atom feed is available.
+- Public/partial sources are used only for headlines and metadata unless optional public Fundus enrichment succeeds.
+- Restricted/paywalled sources are not scraped.
 
 Scan behavior:
 - Pulls headline/summary metadata first.

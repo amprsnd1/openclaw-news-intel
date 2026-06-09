@@ -17,11 +17,16 @@ Only use the following commands:
 ```bash
 news-intel sources
 news-intel stats
+news-intel source-groups
+news-intel source-health
 news-intel ingest --mode rss
 news-intel ingest --mode all
 news-intel scan --topic "<topic>" --since "<window>"
 news-intel scan --topic "<topic>" --since "<window>" --source rss,google_news_rss
+news-intel scan --topic "<topic>" --since "<window>" --source official_defense,official_eu,defense_specialist,european_local,google_news_rss --min-confidence medium
+news-intel scan --topic "<topic>" --since "<window>" --source market_signals,google_news_rss --min-confidence medium
 news-intel scan --query "<query>" --since "<window>"
+news-intel scan --query "<query>" --since "<window>" --source market_signals,google_news_rss
 news-intel scan --topic "<topic>" --since "<window>" --only-new
 news-intel scan --topic "<topic>" --since "<window>" --min-confidence medium
 news-intel collect --topic "<topic>" --days <number> --max-items <number>
@@ -40,6 +45,10 @@ news-intel digest --topic "<topic>" --days <number> --include-metadata-only
 - GDELT is the primary strategic topic discovery source.
 - RSS is fallback and remains the core safe ingestion path.
 - For quick news monitoring, prefer `scan`.
+- For quick monitoring, use `news-intel scan --topic "<topic>" --since "24h" --min-confidence medium` and let topic defaults choose source groups.
+- Use explicit `--source` only when the user asks for a specific source group.
+- For strategic defense/security topics, topic defaults include `defense_specialist`, `european_local`, `google_news_rss`, `official_defense`, and `official_eu`.
+- For macro/trade/markets topics, topic defaults include `market_signals`, `official_financial`, and `google_news_rss`.
 - For deeper research, use `collect -> enrich -> digest`.
 - Fundus is not used by default in scan; enrich only after a signal needs deeper context.
 - Fundus is optional enrichment only.
@@ -82,16 +91,33 @@ news-intel digest --topic "global_trade_and_country_flows" --days 7
 For a source health check, run:
 ```bash
 news-intel sources
+news-intel source-groups
+news-intel source-health
 news-intel stats
 ```
 For quick monitoring, run:
 ```bash
 news-intel scan --topic "<topic>" --since "2h" --only-new --min-confidence medium
 ```
+For defense/security monitoring, run:
+```bash
+news-intel scan --topic "europe_ru_war_preparations" --since "24h" --min-confidence medium
+```
+For macro/trade/markets monitoring, run:
+```bash
+news-intel scan --topic "global_trade_and_country_flows" --since "24h" --min-confidence medium
+```
+For Ukraine financing headline signals, run:
+```bash
+news-intel scan --topic "ukraine_financing" --since "24h" --min-confidence medium
+```
 Natural language mappings:
 - "check the latest signals" -> `news-intel scan --topic "<topic>" --since "2h" --only-new --min-confidence medium`
-- "morning headlines" -> `news-intel scan --topic "<topic>" --since "24h" --only-new --min-confidence medium`
+- "morning headlines" -> `news-intel scan --topic "<topic>" --since "24h" --min-confidence medium`
 - "scan the last 2 hours" -> `news-intel scan --topic "<topic>" --since "2h" --only-new --min-confidence medium`
+- "morning scan for Europe-Russia war prep" -> `news-intel scan --topic "europe_ru_war_preparations" --since "24h" --min-confidence medium`
+- "market signal scan" -> `news-intel scan --topic "global_trade_and_country_flows" --since "24h" --min-confidence medium`
+- "Ukraine financing headlines" -> `news-intel scan --topic "ukraine_financing" --since "24h" --min-confidence medium`
 - "anything new on Europe-Russia war prep?" -> `news-intel scan --topic "europe_ru_war_preparations" --since "2h" --only-new --min-confidence medium`
 For a fresh digest, run:
 ```bash

@@ -32,6 +32,22 @@
 
 "Run `news-intel scan --topic \"europe_ru_war_preparations\" --since \"6h\" --source rss,google_news_rss`. Treat Google News RSS as headline metadata only. Return compact signal sections and source status."
 
+## 4b) Defense/security source-group scan
+
+"Run `news-intel scan --topic \"europe_ru_war_preparations\" --since \"24h\" --source official_defense,official_eu,defense_specialist,european_local,google_news_rss --min-confidence medium`. Return only high and medium signals, source status, and gaps. Do not enrich unless I ask."
+
+## 4c) Financial/market source-group scan
+
+"Run `news-intel scan --topic \"global_trade_and_country_flows\" --since \"24h\" --source market_signals,google_news_rss --min-confidence medium`. Focus on tariffs, export controls, shipping, rates, commodities, and trade-flow signals."
+
+## 4d) Ukraine financing market-source scan
+
+"Run `news-intel scan --topic \"ukraine_financing\" --since \"24h\" --source market_signals,google_news_rss,rss --min-confidence medium`. Focus on loans, IMF, EU support, budget support, bonds, and sovereign funding signals."
+
+## 4e) Free-form market query scan
+
+"Run `news-intel scan --query \"UK gilts debt issuance fiscal rules\" --since \"24h\" --source market_signals,google_news_rss`. Return compact signal sections with markdown source links."
+
 ## 5) China Taiwan risk digest
 
 "Run `news-intel collect --topic \"china_taiwan_risk\" --days 7 --max-items 100 --no-enrich` then `news-intel digest --topic \"china_taiwan_risk\" --days 7`. Focus on military pressure, blockade risk, and semiconductor supply-chain signals."

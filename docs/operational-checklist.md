@@ -9,6 +9,8 @@
 ## Routine Run
 
 - `news-intel scan --topic "<topic>" --since "2h" --only-new --min-confidence medium`
+- `news-intel source-groups`
+- `news-intel source-health`
 - `news-intel ingest --mode rss --max-items 5`
 - `news-intel collect --topic "<topic>" --days 7 --max-items 50 --max-queries 1 --use-cache-first`
 - `news-intel enrich --topic "<topic>" --days 30 --adapter fundus --max-items 100 --include-rss`
@@ -19,9 +21,12 @@
 ## Fast Signal Runs
 
 - `news-intel scan --topic "europe_ru_war_preparations" --since "2h" --only-new --min-confidence medium`
+- `news-intel scan --topic "europe_ru_war_preparations" --since "24h" --min-confidence medium`
 - `news-intel scan --topic "china_taiwan_risk" --since "6h"`
 - `news-intel scan --topic "migration_policy_europe" --since "24h"`
+- `news-intel scan --topic "global_trade_and_country_flows" --since "24h" --min-confidence medium`
 - `news-intel scan --query "NATO troops eastern Europe" --since "24h"`
+- `news-intel scan --query "UK gilts debt issuance fiscal rules" --since "24h" --source market_signals,google_news_rss`
 - `news-intel scan --topic "europe_ru_war_preparations" --since "6h" --source rss,google_news_rss`
 
 Use scan for headlines, alerts, quick monitoring, and early signal detection. Use collect/enrich/digest for deeper research and weekly review.
@@ -45,6 +50,8 @@ Use scan for headlines, alerts, quick monitoring, and early signal detection. Us
 
 - Do not bypass paywalls.
 - Do not scrape restricted/subscription content.
+- Treat Google News RSS as headline metadata only.
+- Enable official sources only when stable public RSS/Atom feeds exist.
 - Keep Reuters/Bloomberg/FT/WSJ as metadata-only unless licensed APIs are configured.
 
 ## Failure Handling

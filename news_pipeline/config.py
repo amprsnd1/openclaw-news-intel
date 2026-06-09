@@ -57,6 +57,8 @@ def load_sources(path: Path = DEFAULT_SOURCES_FILE) -> List[Dict[str, Any]]:
         item = dict(src)
         item.setdefault("enabled", True)
         item.setdefault("type", "news")
+        item.setdefault("id", str(item["name"]).strip().lower().replace(" ", "_").replace("/", "_"))
+        item.setdefault("category", item.get("adapter", "rss"))
         item.setdefault("language", "unknown")
         item.setdefault("region", "global")
         item.setdefault("country", "")
@@ -64,6 +66,52 @@ def load_sources(path: Path = DEFAULT_SOURCES_FILE) -> List[Dict[str, Any]]:
         item.setdefault("adapter", "rss")
         normalized.append(item)
     return normalized
+
+
+def load_source_groups(path: Path = DEFAULT_SOURCES_FILE) -> Dict[str, Dict[str, Any]]:
+    data = _read_yaml(path)
+    raw_groups = data.get("source_groups", {}) or {}
+    if not isinstance(raw_groups, dict):
+        raise ConfigError("'source_groups' must be a map")
+
+    groups: Dict[str, Dict[str, Any]] = {}
+    for name, value in raw_groups.items():
+        if isinstance(value, list):
+            groups[str(name)] = {"description": "", "sources": value}
+        elif isinstance(value, dict):
+            sources = value.get("sources", [])
+            if not isinstance(sources, list):
+                raise ConfigError(f"source_groups.{name}.sources must be a list")
+            groups[str(name)] = {
+                "description": value.get("description", ""),
+                "sources": sources,
+            }
+        else:
+            raise ConfigError(f"source_groups.{name} must be a map or list")
+    return groups
+
+
+def load_source_quality(path: Path = DEFAULT_SOURCES_FILE) -> Dict[str, str]:
+    data = _read_yaml(path)
+    raw_quality = data.get("source_quality", {}) or {}
+    if not isinstance(raw_quality, dict):
+        raise ConfigError("'source_quality' must be a map")
+    return {str(k): str(v) for k, v in raw_quality.items()}
+
+
+def load_google_news_config(path: Path = DEFAULT_SOURCES_FILE) -> Dict[str, Any]:
+    data = _read_yaml(path)
+    cfg = data.get("google_news_rss", {}) or {}
+    if not isinstance(cfg, dict):
+        raise ConfigError("'google_news_rss' must be a map")
+    return {
+        "enabled": cfg.get("enabled", True),
+        "max_queries_per_topic": int(cfg.get("max_queries_per_topic", 3)),
+        "max_items_per_query": int(cfg.get("max_items_per_query", 20)),
+        "timeout_seconds": int(cfg.get("timeout_seconds", 15)),
+        "cache_ttl_minutes": int(cfg.get("cache_ttl_minutes", 60)),
+        "user_agent": str(cfg.get("user_agent", "news-intel local research tool")),
+    }
 
 
 def load_watchlists(path: Path = DEFAULT_WATCHLISTS_FILE) -> List[Dict[str, Any]]:

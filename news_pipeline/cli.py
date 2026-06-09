@@ -4,7 +4,16 @@ import argparse
 from typing import Any, Dict, List, Tuple
 
 from .collector import RESTRICTED_DOMAINS, access_mode_for_url, build_gdelt_topic_query_plan, collect_topic, enrich_topic
-from .config import get_enabled_sources, load_gdelt_config, load_sources, load_watchlists, resolve_db_path
+from .config import (
+    get_enabled_sources,
+    load_gdelt_config,
+    load_google_news_config,
+    load_source_groups,
+    load_source_quality,
+    load_sources,
+    load_watchlists,
+    resolve_db_path,
+)
 from .dedupe import dedupe_batch
 from .digest import render_search_results_markdown, render_watchlist_digest_markdown
 from .filters import apply_watchlists
@@ -195,6 +204,9 @@ def cmd_scan(args: argparse.Namespace) -> int:
             max_queries=args.max_queries,
             use_cache_first=args.use_cache_first,
             gdelt_config=load_gdelt_config(),
+            google_news_config=load_google_news_config(),
+            source_groups=load_source_groups(),
+            source_quality=load_source_quality(),
         )
     except ValueError as exc:
         storage.close()
@@ -521,6 +533,132 @@ def cmd_sources(_: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_source_groups(_: argparse.Namespace) -> int:
+    storage, sources, _ = _load_runtime()
+    try:
+        groups = load_source_groups()
+        enabled_sources = {str(s.get("id") or s.get("name")) for s in sources if s.get("enabled", True)}
+        enabled_names = {str(s.get("name")) for s in sources if s.get("enabled", True)}
+    finally:
+        storage.close()
+    recommended = {
+        "official_defense": "Europe-Russia war prep, defense monitoring",
+        "official_eu": "EU policy, migration, energy, Ukraine financing",
+        "official_financial": "Ukraine financing, fiscal/rates/debt, trade",
+        "market_signals": "global trade, Ukraine financing, energy security",
+        "defense_specialist": "war prep, China-Taiwan, Iran war risk",
+        "european_local": "migration, Europe-Russia, regional early signals",
+        "fast_headlines": "broad morning scans",
+    }
+    lines = ["# Source Groups", ""]
+    for name, group in sorted(groups.items()):
+        refs = [str(ref) for ref in group.get("sources", [])]
+        enabled_count = sum(1 for ref in refs if ref in enabled_sources or ref in enabled_names or ref in {"rss", "google_news_rss", "gdelt"})
+        lines.append(f"- **{name}**")
+        lines.append(f"  Description: {group.get('description') or '-'}")
+        lines.append(f"  Source count: {len(refs)}")
+        lines.append(f"  Enabled source count: {enabled_count}")
+        lines.append(f"  Recommended topics: {recommended.get(name, '-')}")
+    print("\n".join(lines))
+    return 0
+
+
+def _source_ref_matches(source: Dict[str, Any], ref: str) -> bool:
+    key = (ref or "").strip().lower().replace(" ", "_")
+    return key in {
+        str(source.get("id") or "").strip().lower().replace(" ", "_"),
+        str(source.get("name") or "").strip().lower().replace(" ", "_"),
+        str(source.get("category") or "").strip().lower().replace(" ", "_"),
+    }
+
+
+def cmd_source_health(_: argparse.Namespace) -> int:
+    storage, sources, _ = _load_runtime()
+    try:
+        groups = load_source_groups()
+        rows = storage.list_recent(days=1, limit=10000)
+    finally:
+        storage.close()
+
+    by_source: Dict[str, Dict[str, int]] = {}
+    for row in rows:
+        name = str(row.get("source") or "")
+        data = by_source.setdefault(name, {"items": 0, "signals": 0})
+        data["items"] += 1
+        if row.get("stored_relevance_class") in {"direct_match", "near_miss"}:
+            data["signals"] += 1
+
+    def live_enabled(source: Dict[str, Any]) -> bool:
+        return bool(source.get("enabled", True)) and source.get("status") != "roadmap_no_stable_feed" and bool(source.get("url")) and source.get("url") != "roadmap-no-stable-feed"
+
+    def sources_for_ref(ref: str) -> List[Dict[str, Any]]:
+        key = (ref or "").strip().lower().replace(" ", "_")
+        if key == "rss":
+            return [source for source in sources if source.get("adapter", "rss") == "rss"]
+        if key in {"google_news_rss", "gdelt"}:
+            return []
+        return [source for source in sources if _source_ref_matches(source, ref)]
+
+    def ref_enabled(ref: str) -> bool:
+        key = (ref or "").strip().lower().replace(" ", "_")
+        if key in {"google_news_rss", "gdelt"}:
+            return True
+        return any(source.get("enabled", True) for source in sources_for_ref(ref))
+
+    def ref_working(ref: str) -> bool:
+        key = (ref or "").strip().lower().replace(" ", "_")
+        if key in {"google_news_rss", "gdelt"}:
+            return True
+        return any(live_enabled(source) for source in sources_for_ref(ref))
+
+    def ref_failed(ref: str) -> bool:
+        key = (ref or "").strip().lower().replace(" ", "_")
+        if key in {"google_news_rss", "gdelt"}:
+            return False
+        ref_sources = sources_for_ref(ref)
+        return bool(ref_sources) and not any(live_enabled(source) for source in ref_sources)
+
+    lines = ["# Source Health", "", "## Groups"]
+    for name, group in sorted(groups.items()):
+        refs = [str(ref) for ref in group.get("sources", [])]
+        group_sources = [source for ref in refs for source in sources_for_ref(ref)]
+        enabled_count = sum(1 for ref in refs if ref_enabled(ref))
+        working_count = sum(1 for ref in refs if ref_working(ref))
+        failed_count = sum(1 for ref in refs if ref_failed(ref))
+        items = sum(by_source.get(str(source.get("name")), {}).get("items", 0) for source in group_sources)
+        signals = sum(by_source.get(str(source.get("name")), {}).get("signals", 0) for source in group_sources)
+        rate = (signals / items) if items else 0.0
+        lines.append(f"- **{name}**")
+        lines.append(f"  Description: {group.get('description') or '-'}")
+        lines.append(f"  Configured source count: {len(refs)}")
+        lines.append(f"  Enabled source count: {enabled_count}")
+        lines.append(f"  Working source count: {working_count}")
+        lines.append(f"  Failed source count: {failed_count}")
+        lines.append(f"  Items last 24h: {items}")
+        lines.append(f"  Signals last 24h: {signals}")
+        lines.append(f"  Signal rate: {rate:.2f}")
+        lines.append("  Last checked: local metadata only")
+
+    lines.extend(["", "## Sources"])
+    for source in sorted(sources, key=lambda s: str(s.get("id") or s.get("name"))):
+        name = str(source.get("name"))
+        counts = by_source.get(name, {"items": 0, "signals": 0})
+        status = source.get("status") or ("enabled_live" if live_enabled(source) else "disabled")
+        last_error = "-" if status == "enabled_live" else status
+        lines.append(f"- **{source.get('id') or name}** | {name}")
+        lines.append(f"  Group/category: {source.get('category', source.get('adapter', '-'))}")
+        lines.append(f"  Enabled: {bool(source.get('enabled', True))}")
+        lines.append(f"  Status: {status}")
+        lines.append(f"  Access mode: {source.get('access_mode', '-')}")
+        lines.append(f"  Last fetch status: {'local_config_ok' if status == 'enabled_live' else status}")
+        lines.append(f"  Items last 24h: {counts.get('items', 0)}")
+        lines.append(f"  Signals last 24h: {counts.get('signals', 0)}")
+        lines.append(f"  Last error: {last_error}")
+        lines.append("  Last checked: local metadata only")
+    print("\n".join(lines))
+    return 0
+
+
 def cmd_stats(_: argparse.Namespace) -> int:
     storage, _, _ = _load_runtime()
     statuses = _adapter_statuses()
@@ -626,7 +764,7 @@ def build_parser() -> argparse.ArgumentParser:
     subject.add_argument("--query", type=str, help="Free-form headline query")
     p_scan.add_argument("--since", type=str, default="6h", help="Lookback window such as 2h, 24h, or 7d")
     p_scan.add_argument("--max-items", type=int, default=50, help="Maximum signals/items to return")
-    p_scan.add_argument("--source", type=str, default="rss", help="Comma-separated sources: rss, google_news_rss, gdelt")
+    p_scan.add_argument("--source", type=str, default=None, help="Comma-separated sources or groups. Omit for topic default scan sources.")
     p_scan.add_argument("--min-confidence", choices=("low", "medium", "high"), default="low", help="Minimum signal tier")
     p_scan.add_argument("--only-new", action="store_true", default=True, help="Hide items already shown by prior scans")
     p_scan.add_argument("--show-seen", action="store_true", help="Show items already returned by prior scans")
@@ -645,6 +783,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_sources = sub.add_parser("sources", help="List configured sources")
     p_sources.set_defaults(func=cmd_sources)
+
+    p_source_groups = sub.add_parser("source-groups", help="List configured scan source groups")
+    p_source_groups.set_defaults(func=cmd_source_groups)
+
+    p_source_health = sub.add_parser("source-health", help="Report local/cached source coverage diagnostics")
+    p_source_health.set_defaults(func=cmd_source_health)
 
     p_stats = sub.add_parser("stats", help="Pipeline stats")
     p_stats.set_defaults(func=cmd_stats)

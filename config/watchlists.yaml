@@ -1,991 +1,1039 @@
 watchlists:
-  - name: ukraine_financing
-    topic: Ukraine financing
-    description: Tracks Ukraine financing support, IMF programs, EU support instruments, and sovereign funding risk.
-    keywords:
-      - Ukraine
-      - IMF
-      - loan
-      - financing
-    phrases:
-      - Ukraine IMF loan
-      - sovereign debt
-    context_terms:
-      - Ukraine
-      - Ukrainian
-      - Kyiv
-      - IMF
-      - EU
-      - European Union
-      - G7
-      - World Bank
-    core_terms:
-      - financing
-      - loan
-      - loans
-      - tranche
-      - disbursement
-      - aid package
-      - budget support
-      - macro financial assistance
-      - Ukraine Facility
-      - frozen assets
-      - frozen Russian assets
-      - windfall profits
-      - sovereign debt
-      - bond
-      - bonds
-      - restructuring
-      - fiscal gap
-      - deficit
-      - donor funding
-      - grant
-      - guarantees
-    suggested_queries:
-      - Ukraine IMF tranche
-      - Ukraine EU loan
-      - frozen Russian assets Ukraine financing
-      - Ukraine budget support
-    briefing_focus:
-      - IMF and multilateral financing updates
-      - EU and bilateral support flows
-      - sovereign debt and bond-market implications
-    sources: []
-    date_from:
-    date_to:
-
-  - name: eu_energy_security
-    topic: EU energy security
-    description: Tracks EU gas, LNG, infrastructure, and sanctions-driven energy security developments.
-    keywords:
-      - gas
-      - LNG
-      - pipeline
-      - sanctions
-    phrases:
-      - energy security
-      - supply shock
-    suggested_queries:
-      - EU LNG security
-      - Europe gas supply disruption
-      - EU energy sanctions impact
-    briefing_focus:
-      - supply security
-      - infrastructure risk
-      - policy and pricing implications
-    sources:
-      - BBC
-      - The Guardian
-      - Politico EU
-    date_from:
-    date_to:
-
-  - name: europe_ru_war_preparations
-    topic: Europe Russia war preparations
-    description: Tracks signs that European states, NATO, EU institutions, Russia, or adjacent countries are preparing for a broader military, civil, cyber, logistical, financial, or industrial confrontation.
-    keywords:
-      - war preparation
-      - military readiness
-      - defense readiness
-      - defence readiness
-      - mobilization
-      - mobilisation
-      - conscription
-      - reservists
-      - civil defense
-      - civil defence
-      - defense spending
-      - defence spending
-      - rearmament
-      - troop deployment
-      - military exercises
-      - cyberattack
-      - sabotage
-      - critical infrastructure
-      - undersea cables
-      - airspace violation
-      - border incident
-      - military procurement
-      - ammunition production
-      - war economy
-      - sanctions enforcement
-    phrases:
-      - NATO summit
-      - EU summit
-      - Baltic Sea cable damage
-      - Russian airspace violation
-      - emergency defense package
-      - emergency defence package
-      - state of emergency
-      - civil protection drill
-      - Article 4
-      - Article 5
-      - Suwalki Gap
-      - national security strategy
-      - military doctrine
-      - border closure
-      - evacuation plan
-      - shelter plan
-    suggested_queries:
-      - Europe Russia war preparations defense budget
-      - NATO readiness Russia Europe civil defense
-      - Europe rearmament ammunition production
-      - Russia sabotage Europe critical infrastructure
-      - Baltic Sea undersea cable sabotage Russia
-      - Poland civil defense Russia
-      - Germany defense spending Russia
-      - EU joint borrowing defense Ukraine
-    briefing_focus:
-      - What changed in military readiness?
-      - What changed in defense budgets or procurement?
-      - Any civil defense or mobilization signals?
-      - Any cyber, sabotage, or critical infrastructure incidents?
-      - Any signs of NATO or EU moving from rhetoric to implementation?
-      - Market implications for defense, energy, bonds, and fiscal policy.
-    context_terms:
-      - Europe
-      - European Union
-      - EU
-      - NATO
-      - Russia
-      - Russian
-      - Ukraine
-      - Poland
-      - Baltic states
-      - Estonia
-      - Latvia
-      - Lithuania
-      - Finland
-      - Sweden
-      - Germany
-      - France
-      - Romania
-      - Moldova
-      - Belarus
-      - Kaliningrad
-      - Suwalki Gap
-      - Black Sea
-      - Baltic Sea
-      - Arctic
-    core_terms:
-      - war preparation
-      - military readiness
-      - defense readiness
-      - defence readiness
-      - civil defense
-      - civil defence
-      - mobilization
-      - mobilisation
-      - conscription
-      - draft
-      - reservists
-      - territorial defense
-      - national guard
-      - emergency preparedness
-      - war economy
-      - defense industrial base
-      - defence industrial base
-      - ammunition production
-      - artillery shells
-      - air defense
-      - air defence
-      - missile defense
-      - missile defence
-      - drone defense
-      - drone defence
-      - military procurement
-      - defense spending
-      - defence spending
-      - defense budget
-      - defence budget
-      - NATO spending target
-      - rearmament
-      - deterrence
-      - forward deployment
-      - troop deployment
-      - military exercises
-      - joint exercises
-      - readiness exercise
-      - hybrid warfare
-      - sabotage
-      - critical infrastructure
-      - undersea cables
-      - energy infrastructure
-      - railway sabotage
-      - cyberattack
-      - cyber attack
-      - cyber defense
-      - cyber defence
-      - disinformation
-      - GPS jamming
-      - electronic warfare
-      - border incident
-      - airspace violation
-      - drone incursion
-      - Russian spy ship
-      - shadow fleet
-      - sanctions enforcement
-    financial_and_policy_terms:
-      - defense budget increase
-      - defence budget increase
-      - military aid
-      - Ukraine aid
-      - European Defence Fund
-      - EU defense fund
-      - EU defence fund
-      - NATO funding
-      - defense bonds
-      - defence bonds
-      - joint borrowing
-      - EU borrowing
-      - war bonds
-      - procurement contracts
-      - Rheinmetall
-      - BAE Systems
-      - Leonardo
-      - Thales
-      - Saab
-      - Kongsberg
-      - MBDA
-      - Airbus Defence
-      - Lockheed Martin
-      - Raytheon
-      - ammunition factory
-      - arms production
-      - weapons production
-      - military logistics
-      - supply chain security
-    event_triggers:
-      - new defense budget
-      - new defence budget
-      - emergency defense package
-      - emergency defence package
-      - NATO summit
-      - EU summit
-      - Article 5
-      - Article 4
-      - state of emergency
-      - national security strategy
-      - military doctrine
-      - border closure
-      - evacuation plan
-      - shelter plan
-      - civil protection drill
-      - cyber incident
-      - sabotage investigation
-      - Russian airspace violation
-      - Russian drone
-      - Russian missile
-      - Russian naval activity
-      - Baltic Sea cable damage
-      - railway disruption
-      - energy grid attack
-    direct_match_rules:
-      require:
-        any_context_terms: true
-        any_core_terms: true
-    near_miss_rules:
-      - Ukraine battlefield story without European readiness, defense spending, civil defense, cyber, sabotage, or logistics angle.
-      - General Russia sanctions story without war-preparation relevance.
-      - Generic NATO diplomacy without concrete readiness, budget, deployment, or procurement signal.
-      - Generic election story without defense or war-preparation policy consequences.
-    sources: []
-    date_from:
-    date_to:
-
-  - name: china_taiwan_risk
-    topic: China Taiwan risk
-    description: Tracks military, political, economic, semiconductor, shipping, sanctions, and diplomatic signals related to China Taiwan escalation risk.
-    keywords:
-      - Taiwan Strait
-      - PLA
-      - military drills
-      - naval exercise
-      - ADIZ
-      - blockade
-      - quarantine
-      - invasion
-      - amphibious assault
-      - missile test
-      - aircraft carrier
-      - warships
-      - fighter jets
-      - military pressure
-      - maritime militia
-      - coast guard
-      - export controls
-      - chip restrictions
-      - semiconductor supply chain
-      - TSMC
-      - ASML
-      - Nvidia
-      - advanced chips
-      - rare earths
-      - Taiwan independence
-      - reunification
-    phrases:
-      - China Taiwan Strait military drills
-      - Taiwan blockade risk
-      - PLA Taiwan naval exercise
-      - TSMC geopolitical risk Taiwan
-      - US China export controls Taiwan
-      - Japan Philippines Taiwan security
-      - Chinese military drills around Taiwan
-      - US arms sale to Taiwan
-      - naval blockade drill
-      - chip export restriction
-    suggested_queries:
-      - China Taiwan Strait military drills
-      - Taiwan blockade risk
-      - PLA Taiwan naval exercise
-      - China Taiwan semiconductor supply chain
-      - TSMC geopolitical risk Taiwan
-      - US China export controls Taiwan
-      - Japan Philippines Taiwan security
-    briefing_focus:
-      - Did military pressure increase?
-      - Are blockade or quarantine scenarios being normalized?
-      - Any semiconductor supply chain implications?
-      - Any US, Japan, Philippines, or Australia response?
-      - Any signs of sanctions, export controls, or trade disruption?
-    context_terms:
-      - China
-      - Chinese
-      - Taiwan
-      - Taiwanese
-      - Taipei
-      - Beijing
-      - Taiwan Strait
-      - South China Sea
-      - East China Sea
-      - United States
-      - US
-      - Japan
-      - Philippines
-      - South Korea
-      - Australia
-    core_terms:
-      - Taiwan Strait
-      - PLA
-      - People's Liberation Army
-      - military drills
-      - live fire drills
-      - naval exercise
-      - air defense identification zone
-      - ADIZ
-      - blockade
-      - quarantine
-      - invasion
-      - amphibious assault
-      - missile test
-      - aircraft carrier
-      - warships
-      - fighter jets
-      - military pressure
-      - grey zone
-      - gray zone
-      - maritime militia
-      - coast guard
-      - cyberattack
-      - cyber attack
-      - disinformation
-      - election interference
-      - sanctions
-      - export controls
-      - chip restrictions
-      - semiconductor supply chain
-      - TSMC
-      - ASML
-      - Nvidia
-      - advanced chips
-      - foundry
-      - rare earths
-      - strategic ambiguity
-      - Taiwan independence
-      - reunification
-    financial_and_policy_terms:
-      - tariffs
-      - export controls
-      - investment restrictions
-      - sanctions package
-      - defense spending
-      - defence spending
-      - military aid
-      - arms sales
-      - F-16
-      - Patriot
-      - anti-ship missiles
-      - semiconductor export ban
-      - chip controls
-      - supply chain relocation
-      - friendshoring
-      - shipping insurance
-      - shipping routes
-      - container shipping
-      - Strait of Malacca
-      - global trade disruption
-    event_triggers:
-      - Chinese military drills around Taiwan
-      - Taiwan election
-      - US arms sale to Taiwan
-      - Pelosi-style visit
-      - congressional delegation
-      - Chinese sanctions
-      - Taiwan airspace violation
-      - naval blockade drill
-      - missile launch
-      - chip export restriction
-      - TSMC production disruption
-      - US China summit
-      - Japan defense alert
-      - Philippines base access
-    direct_match_rules:
-      require:
-        any_context_terms: true
-        any_core_terms: true
-    near_miss_rules:
-      - Generic China economy story without Taiwan, military, chips, sanctions, or trade-risk angle.
-      - Generic semiconductor earnings story without Taiwan geopolitical angle.
-      - General US China diplomacy without Taiwan, export controls, or military signal.
-    sources: []
-    date_from:
-    date_to:
-
-  - name: iran_war_risk
-    topic: Iran war risk
-    description: Tracks escalation risk involving Iran, Israel, the United States, Gulf states, proxies, nuclear facilities, shipping lanes, energy infrastructure, missiles, drones, and regional conflict spillover.
-    keywords:
-      - war
-      - escalation
-      - retaliation
-      - missile strike
-      - drone strike
-      - air strike
-      - ballistic missile
-      - cruise missile
-      - Shahed drone
-      - IRGC
-      - Quds Force
-      - nuclear facility
-      - uranium enrichment
-      - IAEA
-      - Natanz
-      - Fordow
-      - sanctions
-      - proxy attack
-      - Hezbollah
-      - Houthis
-      - US bases
-      - oil tanker
-      - tanker attack
-      - shipping disruption
-      - Strait of Hormuz
-      - Red Sea shipping
-      - oil prices
-      - energy infrastructure
-      - refinery attack
-      - cyberattack
-    phrases:
-      - Iran Israel war risk
-      - Iran missile strike Israel retaliation
-      - Iran nuclear facility IAEA enrichment
-      - Strait of Hormuz tanker attack Iran
-      - Iran proxy attack US base
-      - Houthis Red Sea Iran escalation
-      - Iran sanctions oil prices
-      - US strike on Iran-linked targets
-      - attack on US base
-      - Hormuz closure threat
-    suggested_queries:
-      - Iran Israel war risk
-      - Iran missile strike Israel retaliation
-      - Iran nuclear facility IAEA enrichment
-      - Strait of Hormuz tanker attack Iran
-      - Iran proxy attack US base
-      - Houthis Red Sea Iran escalation
-      - Iran sanctions oil prices
-    briefing_focus:
-      - Is the conflict moving from proxy to direct state conflict?
-      - Any nuclear escalation?
-      - Any oil, Hormuz, Red Sea, or tanker risk?
-      - Any US military involvement?
-      - Any market implications for oil, shipping, defense, and risk assets?
-    context_terms:
-      - Iran
-      - Iranian
-      - Tehran
-      - Israel
-      - Israeli
-      - United States
-      - US
-      - Gulf
-      - Persian Gulf
-      - Strait of Hormuz
-      - Red Sea
-      - Iraq
-      - Syria
-      - Lebanon
-      - Yemen
-      - Saudi Arabia
-      - UAE
-      - Qatar
-      - Bahrain
-      - Jordan
-    core_terms:
-      - war
-      - escalation
-      - retaliation
-      - missile strike
-      - drone strike
-      - air strike
-      - airstrike
-      - ballistic missile
-      - cruise missile
-      - Shahed drone
-      - IRGC
-      - Islamic Revolutionary Guard Corps
-      - Quds Force
-      - nuclear facility
-      - nuclear enrichment
-      - uranium enrichment
-      - IAEA
-      - Natanz
-      - Fordow
-      - Bushehr
-      - sanctions
-      - proxy attack
-      - Hezbollah
-      - Houthis
-      - Houthi
-      - Iraqi militias
-      - Hamas
-      - Islamic Jihad
-      - US bases
-      - oil tanker
-      - tanker attack
-      - shipping disruption
-      - Strait of Hormuz
-      - Red Sea shipping
-      - oil prices
-      - energy infrastructure
-      - refinery attack
-      - air defense
-      - air defence
-      - cyberattack
-      - cyber attack
-    financial_and_policy_terms:
-      - oil price spike
-      - Brent crude
-      - WTI
-      - LNG
-      - tanker insurance
-      - shipping insurance
-      - war risk premium
-      - sanctions enforcement
-      - secondary sanctions
-      - nuclear deal
-      - JCPOA
-      - snapback sanctions
-      - Treasury sanctions
-      - defense deployment
-      - carrier strike group
-      - Patriot deployment
-      - THAAD
-      - Gulf security
-      - energy security
-    event_triggers:
-      - Israeli strike on Iran
-      - Iran retaliates
-      - Iran missile launch
-      - US strike on Iran-linked targets
-      - attack on US base
-      - tanker seized
-      - Hormuz closure threat
-      - Red Sea attack
-      - Hezbollah escalation
-      - Houthi missile attack
-      - IAEA report
-      - nuclear breakout warning
-      - snapback sanctions
-      - oil infrastructure attack
-      - embassy evacuation
-      - carrier deployment
-    direct_match_rules:
-      require:
-        any_context_terms: true
-        any_core_terms: true
-    near_miss_rules:
-      - Generic Middle East diplomacy without Iran escalation signal.
-      - General Israel Gaza story without Iran, Hezbollah, Houthis, US bases, oil, or nuclear angle.
-      - Generic oil market story without Iran, Hormuz, Red Sea, sanctions, or war-risk angle.
-    sources: []
-    date_from:
-    date_to:
-
-  - name: migration_policy_europe
-    topic: Migration policy in Europe
-    description: Tracks European migration policy changes, asylum rules, deportations, border controls, visa routes, residence permits, political backlash, court rulings, and EU-level migration reform.
-    keywords:
-      - migration policy
-      - immigration policy
-      - asylum
-      - asylum seekers
-      - refugees
-      - deportation
-      - returns
-      - border controls
-      - Schengen controls
-      - visa reform
-      - residence permit
-      - work permit
-      - family reunification
-      - integration policy
-      - citizenship
-      - naturalization
-      - irregular migration
-      - safe third country
-      - offshore processing
-      - detention centers
-      - relocation mechanism
-      - EU migration pact
-      - Dublin Regulation
-      - Frontex
-      - migrant crossings
-      - Channel crossings
-      - Mediterranean crossings
-    phrases:
-      - EU migration pact asylum policy
-      - Europe border controls Schengen migration
-      - Germany asylum deportation policy
-      - France immigration law residence permit
-      - Italy migration policy Mediterranean
-      - Poland border migration Belarus
-      - EU Blue Card skilled migration reform
-      - border controls reinstated
-      - safe third country agreement
-      - court blocks migration policy
-    suggested_queries:
-      - EU migration pact asylum policy
-      - Europe border controls Schengen migration
-      - Germany asylum deportation policy
-      - France immigration law residence permit
-      - Italy migration policy Mediterranean
-      - Poland border migration Belarus
-      - EU Blue Card skilled migration reform
-    briefing_focus:
-      - What policy changed?
-      - Which country or EU institution is involved?
-      - Does this affect asylum, visas, residence permits, deportations, or border controls?
-      - Is the change restrictive or liberalizing?
-      - What are the implications for relocation, labor markets, housing, and political risk?
-    context_terms:
-      - Europe
-      - European Union
-      - EU
-      - Schengen
-      - Germany
-      - France
-      - Italy
-      - Spain
-      - Poland
-      - Netherlands
-      - Sweden
-      - Denmark
-      - Austria
-      - Greece
-      - Hungary
-      - Finland
-      - Ireland
-      - United Kingdom
-      - UK
-      - Norway
-      - Switzerland
-    core_terms:
-      - migration policy
-      - immigration policy
-      - asylum
-      - asylum seekers
-      - refugees
-      - migrant
-      - migrants
-      - deportation
-      - returns
-      - return policy
-      - border controls
-      - border checks
-      - Schengen controls
-      - visa reform
-      - residence permit
-      - work permit
-      - family reunification
-      - integration policy
-      - citizenship
-      - naturalization
-      - illegal migration
-      - irregular migration
-      - safe third country
-      - offshore processing
-      - detention centers
-      - reception centers
-      - migrant housing
-      - relocation mechanism
-      - EU migration pact
-      - Dublin Regulation
-      - Frontex
-      - border fence
-      - migrant crossings
-      - Channel crossings
-      - Mediterranean crossings
-    financial_and_policy_terms:
-      - labor shortage
-      - skilled migration
-      - blue card
-      - EU Blue Card
-      - digital nomad visa
-      - startup visa
-      - student visa
-      - seasonal workers
-      - remittances
-      - welfare access
-      - housing pressure
-      - social benefits
-      - healthcare access
-      - integration budget
-      - asylum cost
-      - migration funding
-      - border security funding
-    event_triggers:
-      - new asylum law
-      - new migration law
-      - visa reform
-      - border controls reinstated
-      - deportation deal
-      - Rwanda-style plan
-      - safe third country agreement
-      - court blocks migration policy
-      - EU migration pact vote
-      - Frontex operation
-      - migrant boat disaster
-      - government falls over migration
-      - far-right migration campaign
-      - refugee quota dispute
-      - residence permit changes
-    direct_match_rules:
-      require:
-        any_context_terms: true
-        any_core_terms: true
-    near_miss_rules:
-      - Generic election story that mentions migration only indirectly.
-      - Crime story involving migrants without policy relevance.
-      - General housing story without migration policy link.
-      - Labor market story without visa, work permit, or migration policy angle.
-    sources: []
-    date_from:
-    date_to:
-
-  - name: global_trade_and_country_flows
-    topic: Global trade and country flows
-    description: "Tracks country-level and global trade signals: tariffs, export controls, sanctions, supply chains, shipping routes, trade deficits, customs rules, industrial policy, trade agreements, and geopolitical trade fragmentation."
-    keywords:
-      - global trade
-      - world trade
-      - exports
-      - imports
-      - tariffs
-      - customs
-      - trade deficit
-      - trade surplus
-      - supply chains
-      - shipping
-      - container shipping
-      - WTO
-      - IMF
-      - tariff
-      - trade war
-      - export controls
-      - import restrictions
-      - sanctions
-      - free trade agreement
-      - WTO dispute
-      - supply chain disruption
-      - reshoring
-      - nearshoring
-      - friendshoring
-      - decoupling
-      - de-risking
-      - industrial policy
-      - subsidies
-      - semiconductors
-      - critical minerals
-      - rare earths
-      - EVs
-      - solar panels
-      - batteries
-      - LNG
-      - oil trade
-      - grain exports
-      - Red Sea shipping
-      - Panama Canal
-      - Suez Canal
-      - Strait of Hormuz
-      - freight rates
-      - port congestion
-    phrases:
-      - global trade tariffs export controls
-      - China US trade war export controls
-      - EU China tariffs EVs
-      - rare earth export controls China
-      - Red Sea shipping trade disruption
-      - WTO dispute tariffs
-      - trade deficit currency pressure
-      - supply chain nearshoring Mexico Vietnam India
-      - anti-dumping investigation
-      - trade deal signed
-    suggested_queries:
-      - global trade tariffs export controls
-      - China US trade war export controls
-      - EU China tariffs EVs
-      - rare earth export controls China
-      - Red Sea shipping trade disruption
-      - WTO dispute tariffs
-      - trade deficit currency pressure
-      - supply chain nearshoring Mexico Vietnam India
-    briefing_focus:
-      - Which country changed trade policy?
-      - Is this tariffs, export controls, sanctions, shipping, or supply-chain disruption?
-      - What goods or sectors are affected?
-      - Does this affect inflation, currencies, commodities, equities, or industrial policy?
-      - Is the world moving toward fragmentation, reshoring, or de-risking?
-    context_terms:
-      - global trade
-      - world trade
-      - international trade
-      - exports
-      - imports
-      - tariffs
-      - customs
-      - trade deficit
-      - trade surplus
-      - supply chains
-      - shipping
-      - container shipping
-      - ports
-      - WTO
-      - World Trade Organization
-      - OECD
-      - IMF
-      - World Bank
-      - China
-      - United States
-      - US
-      - EU
-      - Europe
-      - India
-      - Japan
-      - South Korea
-      - Vietnam
-      - Mexico
-      - Canada
-      - Brazil
-      - Turkey
-      - Russia
-      - Gulf states
-    core_terms:
-      - tariff
-      - tariffs
-      - trade war
-      - trade dispute
-      - export controls
-      - import restrictions
-      - customs duty
-      - anti-dumping
-      - countervailing duties
-      - sanctions
-      - secondary sanctions
-      - trade agreement
-      - free trade agreement
-      - FTA
-      - WTO dispute
-      - supply chain disruption
-      - reshoring
-      - nearshoring
-      - friendshoring
-      - decoupling
-      - de-risking
-      - industrial policy
-      - subsidies
-      - local content rules
-      - export ban
-      - rare earths
-      - semiconductors
-      - critical minerals
-      - steel
-      - aluminum
-      - autos
-      - EVs
-      - solar panels
-      - batteries
-      - LNG
-      - oil trade
-      - grain exports
-      - food exports
-      - shipping lanes
-      - Red Sea shipping
-      - Panama Canal
-      - Suez Canal
-      - Strait of Hormuz
-      - container rates
-      - freight rates
-      - port congestion
-    financial_and_policy_terms:
-      - current account
-      - trade balance
-      - balance of payments
-      - currency pressure
-      - inflation pass-through
-      - import prices
-      - export revenues
-      - commodity exports
-      - trade finance
-      - letters of credit
-      - customs revenue
-      - supply chain finance
-      - sanctions compliance
-      - export licensing
-      - foreign direct investment
-      - FDI
-      - capital controls
-      - foreign exchange reserves
-    event_triggers:
-      - new tariffs
-      - tariff hike
-      - tariff cut
-      - export control package
-      - WTO complaint
-      - trade deal signed
-      - trade negotiations fail
-      - sanctions package
-      - shipping route disruption
-      - port strike
-      - canal disruption
-      - rare earth export ban
-      - chip export ban
-      - customs rule change
-      - import ban
-      - anti-dumping investigation
-      - trade deficit widens
-      - trade surplus narrows
-      - supply chain relocation
-      - new industrial subsidy
-    direct_match_rules:
-      require:
-        any_context_terms: true
-        any_core_terms: true
-    near_miss_rules:
-      - Generic GDP story without trade, exports, imports, tariffs, or supply chain relevance.
-      - Single-company earnings story without broader trade policy or supply chain angle.
-      - Commodity price story without trade flow, sanctions, export ban, or shipping angle.
-      - General diplomacy story without trade agreement, tariffs, sanctions, or export controls.
-    sources: []
-    date_from:
-    date_to:
+- name: ukraine_financing
+  topic: Ukraine financing
+  description: Tracks Ukraine financing support, IMF programs, EU support instruments,
+    and sovereign funding risk.
+  keywords:
+  - Ukraine
+  - IMF
+  - loan
+  - financing
+  phrases:
+  - Ukraine IMF loan
+  - sovereign debt
+  context_terms:
+  - Ukraine
+  - Ukrainian
+  - Kyiv
+  - IMF
+  - EU
+  - European Union
+  - G7
+  - World Bank
+  core_terms:
+  - financing
+  - loan
+  - loans
+  - tranche
+  - disbursement
+  - aid package
+  - budget support
+  - macro financial assistance
+  - Ukraine Facility
+  - frozen assets
+  - frozen Russian assets
+  - windfall profits
+  - sovereign debt
+  - bond
+  - bonds
+  - restructuring
+  - fiscal gap
+  - deficit
+  - donor funding
+  - grant
+  - guarantees
+  suggested_queries:
+  - Ukraine IMF tranche
+  - Ukraine EU loan
+  - frozen Russian assets Ukraine financing
+  - Ukraine budget support
+  briefing_focus:
+  - IMF and multilateral financing updates
+  - EU and bilateral support flows
+  - sovereign debt and bond-market implications
+  sources: []
+  date_from: null
+  date_to: null
+  default_scan_sources:
+  - official_financial
+  - google_news_rss
+  - market_signals
+  - fast_headlines
+- name: eu_energy_security
+  topic: EU energy security
+  description: Tracks EU gas, LNG, infrastructure, and sanctions-driven energy security
+    developments.
+  keywords:
+  - gas
+  - LNG
+  - pipeline
+  - sanctions
+  phrases:
+  - energy security
+  - supply shock
+  suggested_queries:
+  - EU LNG security
+  - Europe gas supply disruption
+  - EU energy sanctions impact
+  briefing_focus:
+  - supply security
+  - infrastructure risk
+  - policy and pricing implications
+  sources:
+  - BBC
+  - The Guardian
+  - Politico EU
+  date_from: null
+  date_to: null
+  default_scan_sources:
+  - market_signals
+  - google_news_rss
+  - european_local
+  - official_eu
+- name: europe_ru_war_preparations
+  topic: Europe Russia war preparations
+  description: Tracks signs that European states, NATO, EU institutions, Russia, or
+    adjacent countries are preparing for a broader military, civil, cyber, logistical,
+    financial, or industrial confrontation.
+  keywords:
+  - war preparation
+  - military readiness
+  - defense readiness
+  - defence readiness
+  - mobilization
+  - mobilisation
+  - conscription
+  - reservists
+  - civil defense
+  - civil defence
+  - defense spending
+  - defence spending
+  - rearmament
+  - troop deployment
+  - military exercises
+  - cyberattack
+  - sabotage
+  - critical infrastructure
+  - undersea cables
+  - airspace violation
+  - border incident
+  - military procurement
+  - ammunition production
+  - war economy
+  - sanctions enforcement
+  phrases:
+  - NATO summit
+  - EU summit
+  - Baltic Sea cable damage
+  - Russian airspace violation
+  - emergency defense package
+  - emergency defence package
+  - state of emergency
+  - civil protection drill
+  - Article 4
+  - Article 5
+  - Suwalki Gap
+  - national security strategy
+  - military doctrine
+  - border closure
+  - evacuation plan
+  - shelter plan
+  suggested_queries:
+  - Europe Russia war preparations defense budget
+  - NATO readiness Russia Europe civil defense
+  - Europe rearmament ammunition production
+  - Russia sabotage Europe critical infrastructure
+  - Baltic Sea undersea cable sabotage Russia
+  - Poland civil defense Russia
+  - Germany defense spending Russia
+  - EU joint borrowing defense Ukraine
+  briefing_focus:
+  - What changed in military readiness?
+  - What changed in defense budgets or procurement?
+  - Any civil defense or mobilization signals?
+  - Any cyber, sabotage, or critical infrastructure incidents?
+  - Any signs of NATO or EU moving from rhetoric to implementation?
+  - Market implications for defense, energy, bonds, and fiscal policy.
+  context_terms:
+  - Europe
+  - European Union
+  - EU
+  - NATO
+  - Russia
+  - Russian
+  - Ukraine
+  - Poland
+  - Baltic states
+  - Estonia
+  - Latvia
+  - Lithuania
+  - Finland
+  - Sweden
+  - Germany
+  - France
+  - Romania
+  - Moldova
+  - Belarus
+  - Kaliningrad
+  - Suwalki Gap
+  - Black Sea
+  - Baltic Sea
+  - Arctic
+  core_terms:
+  - war preparation
+  - military readiness
+  - defense readiness
+  - defence readiness
+  - civil defense
+  - civil defence
+  - mobilization
+  - mobilisation
+  - conscription
+  - draft
+  - reservists
+  - territorial defense
+  - national guard
+  - emergency preparedness
+  - war economy
+  - defense industrial base
+  - defence industrial base
+  - ammunition production
+  - artillery shells
+  - air defense
+  - air defence
+  - missile defense
+  - missile defence
+  - drone defense
+  - drone defence
+  - military procurement
+  - defense spending
+  - defence spending
+  - defense budget
+  - defence budget
+  - NATO spending target
+  - rearmament
+  - deterrence
+  - forward deployment
+  - troop deployment
+  - military exercises
+  - joint exercises
+  - readiness exercise
+  - hybrid warfare
+  - sabotage
+  - critical infrastructure
+  - undersea cables
+  - energy infrastructure
+  - railway sabotage
+  - cyberattack
+  - cyber attack
+  - cyber defense
+  - cyber defence
+  - disinformation
+  - GPS jamming
+  - electronic warfare
+  - border incident
+  - airspace violation
+  - drone incursion
+  - Russian spy ship
+  - shadow fleet
+  - sanctions enforcement
+  financial_and_policy_terms:
+  - defense budget increase
+  - defence budget increase
+  - military aid
+  - Ukraine aid
+  - European Defence Fund
+  - EU defense fund
+  - EU defence fund
+  - NATO funding
+  - defense bonds
+  - defence bonds
+  - joint borrowing
+  - EU borrowing
+  - war bonds
+  - procurement contracts
+  - Rheinmetall
+  - BAE Systems
+  - Leonardo
+  - Thales
+  - Saab
+  - Kongsberg
+  - MBDA
+  - Airbus Defence
+  - Lockheed Martin
+  - Raytheon
+  - ammunition factory
+  - arms production
+  - weapons production
+  - military logistics
+  - supply chain security
+  event_triggers:
+  - new defense budget
+  - new defence budget
+  - emergency defense package
+  - emergency defence package
+  - NATO summit
+  - EU summit
+  - Article 5
+  - Article 4
+  - state of emergency
+  - national security strategy
+  - military doctrine
+  - border closure
+  - evacuation plan
+  - shelter plan
+  - civil protection drill
+  - cyber incident
+  - sabotage investigation
+  - Russian airspace violation
+  - Russian drone
+  - Russian missile
+  - Russian naval activity
+  - Baltic Sea cable damage
+  - railway disruption
+  - energy grid attack
+  direct_match_rules:
+    require:
+      any_context_terms: true
+      any_core_terms: true
+  near_miss_rules:
+  - Ukraine battlefield story without European readiness, defense spending, civil
+    defense, cyber, sabotage, or logistics angle.
+  - General Russia sanctions story without war-preparation relevance.
+  - Generic NATO diplomacy without concrete readiness, budget, deployment, or procurement
+    signal.
+  - Generic election story without defense or war-preparation policy consequences.
+  sources: []
+  date_from: null
+  date_to: null
+  default_scan_sources:
+  - defense_specialist
+  - european_local
+  - google_news_rss
+  - official_defense
+  - official_eu
+- name: china_taiwan_risk
+  topic: China Taiwan risk
+  description: Tracks military, political, economic, semiconductor, shipping, sanctions,
+    and diplomatic signals related to China Taiwan escalation risk.
+  keywords:
+  - Taiwan Strait
+  - PLA
+  - military drills
+  - naval exercise
+  - ADIZ
+  - blockade
+  - quarantine
+  - invasion
+  - amphibious assault
+  - missile test
+  - aircraft carrier
+  - warships
+  - fighter jets
+  - military pressure
+  - maritime militia
+  - coast guard
+  - export controls
+  - chip restrictions
+  - semiconductor supply chain
+  - TSMC
+  - ASML
+  - Nvidia
+  - advanced chips
+  - rare earths
+  - Taiwan independence
+  - reunification
+  phrases:
+  - China Taiwan Strait military drills
+  - Taiwan blockade risk
+  - PLA Taiwan naval exercise
+  - TSMC geopolitical risk Taiwan
+  - US China export controls Taiwan
+  - Japan Philippines Taiwan security
+  - Chinese military drills around Taiwan
+  - US arms sale to Taiwan
+  - naval blockade drill
+  - chip export restriction
+  suggested_queries:
+  - China Taiwan Strait military drills
+  - Taiwan blockade risk
+  - PLA Taiwan naval exercise
+  - China Taiwan semiconductor supply chain
+  - TSMC geopolitical risk Taiwan
+  - US China export controls Taiwan
+  - Japan Philippines Taiwan security
+  briefing_focus:
+  - Did military pressure increase?
+  - Are blockade or quarantine scenarios being normalized?
+  - Any semiconductor supply chain implications?
+  - Any US, Japan, Philippines, or Australia response?
+  - Any signs of sanctions, export controls, or trade disruption?
+  context_terms:
+  - China
+  - Chinese
+  - Taiwan
+  - Taiwanese
+  - Taipei
+  - Beijing
+  - Taiwan Strait
+  - South China Sea
+  - East China Sea
+  - United States
+  - US
+  - Japan
+  - Philippines
+  - South Korea
+  - Australia
+  core_terms:
+  - Taiwan Strait
+  - PLA
+  - People's Liberation Army
+  - military drills
+  - live fire drills
+  - naval exercise
+  - air defense identification zone
+  - ADIZ
+  - blockade
+  - quarantine
+  - invasion
+  - amphibious assault
+  - missile test
+  - aircraft carrier
+  - warships
+  - fighter jets
+  - military pressure
+  - grey zone
+  - gray zone
+  - maritime militia
+  - coast guard
+  - cyberattack
+  - cyber attack
+  - disinformation
+  - election interference
+  - sanctions
+  - export controls
+  - chip restrictions
+  - semiconductor supply chain
+  - TSMC
+  - ASML
+  - Nvidia
+  - advanced chips
+  - foundry
+  - rare earths
+  - strategic ambiguity
+  - Taiwan independence
+  - reunification
+  financial_and_policy_terms:
+  - tariffs
+  - export controls
+  - investment restrictions
+  - sanctions package
+  - defense spending
+  - defence spending
+  - military aid
+  - arms sales
+  - F-16
+  - Patriot
+  - anti-ship missiles
+  - semiconductor export ban
+  - chip controls
+  - supply chain relocation
+  - friendshoring
+  - shipping insurance
+  - shipping routes
+  - container shipping
+  - Strait of Malacca
+  - global trade disruption
+  event_triggers:
+  - Chinese military drills around Taiwan
+  - Taiwan election
+  - US arms sale to Taiwan
+  - Pelosi-style visit
+  - congressional delegation
+  - Chinese sanctions
+  - Taiwan airspace violation
+  - naval blockade drill
+  - missile launch
+  - chip export restriction
+  - TSMC production disruption
+  - US China summit
+  - Japan defense alert
+  - Philippines base access
+  direct_match_rules:
+    require:
+      any_context_terms: true
+      any_core_terms: true
+  near_miss_rules:
+  - Generic China economy story without Taiwan, military, chips, sanctions, or trade-risk
+    angle.
+  - Generic semiconductor earnings story without Taiwan geopolitical angle.
+  - General US China diplomacy without Taiwan, export controls, or military signal.
+  sources: []
+  date_from: null
+  date_to: null
+  default_scan_sources:
+  - defense_specialist
+  - google_news_rss
+  - market_signals
+  - european_local
+- name: iran_war_risk
+  topic: Iran war risk
+  description: Tracks escalation risk involving Iran, Israel, the United States, Gulf
+    states, proxies, nuclear facilities, shipping lanes, energy infrastructure, missiles,
+    drones, and regional conflict spillover.
+  keywords:
+  - war
+  - escalation
+  - retaliation
+  - missile strike
+  - drone strike
+  - air strike
+  - ballistic missile
+  - cruise missile
+  - Shahed drone
+  - IRGC
+  - Quds Force
+  - nuclear facility
+  - uranium enrichment
+  - IAEA
+  - Natanz
+  - Fordow
+  - sanctions
+  - proxy attack
+  - Hezbollah
+  - Houthis
+  - US bases
+  - oil tanker
+  - tanker attack
+  - shipping disruption
+  - Strait of Hormuz
+  - Red Sea shipping
+  - oil prices
+  - energy infrastructure
+  - refinery attack
+  - cyberattack
+  phrases:
+  - Iran Israel war risk
+  - Iran missile strike Israel retaliation
+  - Iran nuclear facility IAEA enrichment
+  - Strait of Hormuz tanker attack Iran
+  - Iran proxy attack US base
+  - Houthis Red Sea Iran escalation
+  - Iran sanctions oil prices
+  - US strike on Iran-linked targets
+  - attack on US base
+  - Hormuz closure threat
+  suggested_queries:
+  - Iran Israel war risk
+  - Iran missile strike Israel retaliation
+  - Iran nuclear facility IAEA enrichment
+  - Strait of Hormuz tanker attack Iran
+  - Iran proxy attack US base
+  - Houthis Red Sea Iran escalation
+  - Iran sanctions oil prices
+  briefing_focus:
+  - Is the conflict moving from proxy to direct state conflict?
+  - Any nuclear escalation?
+  - Any oil, Hormuz, Red Sea, or tanker risk?
+  - Any US military involvement?
+  - Any market implications for oil, shipping, defense, and risk assets?
+  context_terms:
+  - Iran
+  - Iranian
+  - Tehran
+  - Israel
+  - Israeli
+  - United States
+  - US
+  - Gulf
+  - Persian Gulf
+  - Strait of Hormuz
+  - Red Sea
+  - Iraq
+  - Syria
+  - Lebanon
+  - Yemen
+  - Saudi Arabia
+  - UAE
+  - Qatar
+  - Bahrain
+  - Jordan
+  core_terms:
+  - war
+  - escalation
+  - retaliation
+  - missile strike
+  - drone strike
+  - air strike
+  - airstrike
+  - ballistic missile
+  - cruise missile
+  - Shahed drone
+  - IRGC
+  - Islamic Revolutionary Guard Corps
+  - Quds Force
+  - nuclear facility
+  - nuclear enrichment
+  - uranium enrichment
+  - IAEA
+  - Natanz
+  - Fordow
+  - Bushehr
+  - sanctions
+  - proxy attack
+  - Hezbollah
+  - Houthis
+  - Houthi
+  - Iraqi militias
+  - Hamas
+  - Islamic Jihad
+  - US bases
+  - oil tanker
+  - tanker attack
+  - shipping disruption
+  - Strait of Hormuz
+  - Red Sea shipping
+  - oil prices
+  - energy infrastructure
+  - refinery attack
+  - air defense
+  - air defence
+  - cyberattack
+  - cyber attack
+  financial_and_policy_terms:
+  - oil price spike
+  - Brent crude
+  - WTI
+  - LNG
+  - tanker insurance
+  - shipping insurance
+  - war risk premium
+  - sanctions enforcement
+  - secondary sanctions
+  - nuclear deal
+  - JCPOA
+  - snapback sanctions
+  - Treasury sanctions
+  - defense deployment
+  - carrier strike group
+  - Patriot deployment
+  - THAAD
+  - Gulf security
+  - energy security
+  event_triggers:
+  - Israeli strike on Iran
+  - Iran retaliates
+  - Iran missile launch
+  - US strike on Iran-linked targets
+  - attack on US base
+  - tanker seized
+  - Hormuz closure threat
+  - Red Sea attack
+  - Hezbollah escalation
+  - Houthi missile attack
+  - IAEA report
+  - nuclear breakout warning
+  - snapback sanctions
+  - oil infrastructure attack
+  - embassy evacuation
+  - carrier deployment
+  direct_match_rules:
+    require:
+      any_context_terms: true
+      any_core_terms: true
+  near_miss_rules:
+  - Generic Middle East diplomacy without Iran escalation signal.
+  - General Israel Gaza story without Iran, Hezbollah, Houthis, US bases, oil, or
+    nuclear angle.
+  - Generic oil market story without Iran, Hormuz, Red Sea, sanctions, or war-risk
+    angle.
+  sources: []
+  date_from: null
+  date_to: null
+  default_scan_sources:
+  - defense_specialist
+  - google_news_rss
+  - market_signals
+  - european_local
+- name: migration_policy_europe
+  topic: Migration policy in Europe
+  description: Tracks European migration policy changes, asylum rules, deportations,
+    border controls, visa routes, residence permits, political backlash, court rulings,
+    and EU-level migration reform.
+  keywords:
+  - migration policy
+  - immigration policy
+  - asylum
+  - asylum seekers
+  - refugees
+  - deportation
+  - returns
+  - border controls
+  - Schengen controls
+  - visa reform
+  - residence permit
+  - work permit
+  - family reunification
+  - integration policy
+  - citizenship
+  - naturalization
+  - irregular migration
+  - safe third country
+  - offshore processing
+  - detention centers
+  - relocation mechanism
+  - EU migration pact
+  - Dublin Regulation
+  - Frontex
+  - migrant crossings
+  - Channel crossings
+  - Mediterranean crossings
+  phrases:
+  - EU migration pact asylum policy
+  - Europe border controls Schengen migration
+  - Germany asylum deportation policy
+  - France immigration law residence permit
+  - Italy migration policy Mediterranean
+  - Poland border migration Belarus
+  - EU Blue Card skilled migration reform
+  - border controls reinstated
+  - safe third country agreement
+  - court blocks migration policy
+  suggested_queries:
+  - EU migration pact asylum policy
+  - Europe border controls Schengen migration
+  - Germany asylum deportation policy
+  - France immigration law residence permit
+  - Italy migration policy Mediterranean
+  - Poland border migration Belarus
+  - EU Blue Card skilled migration reform
+  briefing_focus:
+  - What policy changed?
+  - Which country or EU institution is involved?
+  - Does this affect asylum, visas, residence permits, deportations, or border controls?
+  - Is the change restrictive or liberalizing?
+  - What are the implications for relocation, labor markets, housing, and political
+    risk?
+  context_terms:
+  - Europe
+  - European Union
+  - EU
+  - Schengen
+  - Germany
+  - France
+  - Italy
+  - Spain
+  - Poland
+  - Netherlands
+  - Sweden
+  - Denmark
+  - Austria
+  - Greece
+  - Hungary
+  - Finland
+  - Ireland
+  - United Kingdom
+  - UK
+  - Norway
+  - Switzerland
+  core_terms:
+  - migration policy
+  - immigration policy
+  - asylum
+  - asylum seekers
+  - refugees
+  - migrant
+  - migrants
+  - deportation
+  - returns
+  - return policy
+  - border controls
+  - border checks
+  - Schengen controls
+  - visa reform
+  - residence permit
+  - work permit
+  - family reunification
+  - integration policy
+  - citizenship
+  - naturalization
+  - illegal migration
+  - irregular migration
+  - safe third country
+  - offshore processing
+  - detention centers
+  - reception centers
+  - migrant housing
+  - relocation mechanism
+  - EU migration pact
+  - Dublin Regulation
+  - Frontex
+  - border fence
+  - migrant crossings
+  - Channel crossings
+  - Mediterranean crossings
+  financial_and_policy_terms:
+  - labor shortage
+  - skilled migration
+  - blue card
+  - EU Blue Card
+  - digital nomad visa
+  - startup visa
+  - student visa
+  - seasonal workers
+  - remittances
+  - welfare access
+  - housing pressure
+  - social benefits
+  - healthcare access
+  - integration budget
+  - asylum cost
+  - migration funding
+  - border security funding
+  event_triggers:
+  - new asylum law
+  - new migration law
+  - visa reform
+  - border controls reinstated
+  - deportation deal
+  - Rwanda-style plan
+  - safe third country agreement
+  - court blocks migration policy
+  - EU migration pact vote
+  - Frontex operation
+  - migrant boat disaster
+  - government falls over migration
+  - far-right migration campaign
+  - refugee quota dispute
+  - residence permit changes
+  direct_match_rules:
+    require:
+      any_context_terms: true
+      any_core_terms: true
+  near_miss_rules:
+  - Generic election story that mentions migration only indirectly.
+  - Crime story involving migrants without policy relevance.
+  - General housing story without migration policy link.
+  - Labor market story without visa, work permit, or migration policy angle.
+  sources: []
+  date_from: null
+  date_to: null
+  default_scan_sources:
+  - european_local
+  - google_news_rss
+  - official_eu
+  - fast_headlines
+- name: global_trade_and_country_flows
+  topic: Global trade and country flows
+  description: 'Tracks country-level and global trade signals: tariffs, export controls,
+    sanctions, supply chains, shipping routes, trade deficits, customs rules, industrial
+    policy, trade agreements, and geopolitical trade fragmentation.'
+  keywords:
+  - global trade
+  - world trade
+  - exports
+  - imports
+  - tariffs
+  - customs
+  - trade deficit
+  - trade surplus
+  - supply chains
+  - shipping
+  - container shipping
+  - WTO
+  - IMF
+  - tariff
+  - trade war
+  - export controls
+  - import restrictions
+  - sanctions
+  - free trade agreement
+  - WTO dispute
+  - supply chain disruption
+  - reshoring
+  - nearshoring
+  - friendshoring
+  - decoupling
+  - de-risking
+  - industrial policy
+  - subsidies
+  - semiconductors
+  - critical minerals
+  - rare earths
+  - EVs
+  - solar panels
+  - batteries
+  - LNG
+  - oil trade
+  - grain exports
+  - Red Sea shipping
+  - Panama Canal
+  - Suez Canal
+  - Strait of Hormuz
+  - freight rates
+  - port congestion
+  phrases:
+  - global trade tariffs export controls
+  - China US trade war export controls
+  - EU China tariffs EVs
+  - rare earth export controls China
+  - Red Sea shipping trade disruption
+  - WTO dispute tariffs
+  - trade deficit currency pressure
+  - supply chain nearshoring Mexico Vietnam India
+  - anti-dumping investigation
+  - trade deal signed
+  suggested_queries:
+  - global trade tariffs export controls
+  - China US trade war export controls
+  - EU China tariffs EVs
+  - rare earth export controls China
+  - Red Sea shipping trade disruption
+  - WTO dispute tariffs
+  - trade deficit currency pressure
+  - supply chain nearshoring Mexico Vietnam India
+  briefing_focus:
+  - Which country changed trade policy?
+  - Is this tariffs, export controls, sanctions, shipping, or supply-chain disruption?
+  - What goods or sectors are affected?
+  - Does this affect inflation, currencies, commodities, equities, or industrial policy?
+  - Is the world moving toward fragmentation, reshoring, or de-risking?
+  context_terms:
+  - global trade
+  - world trade
+  - international trade
+  - exports
+  - imports
+  - tariffs
+  - customs
+  - trade deficit
+  - trade surplus
+  - supply chains
+  - shipping
+  - container shipping
+  - ports
+  - WTO
+  - World Trade Organization
+  - OECD
+  - IMF
+  - World Bank
+  - China
+  - United States
+  - US
+  - EU
+  - Europe
+  - India
+  - Japan
+  - South Korea
+  - Vietnam
+  - Mexico
+  - Canada
+  - Brazil
+  - Turkey
+  - Russia
+  - Gulf states
+  core_terms:
+  - tariff
+  - tariffs
+  - trade war
+  - trade dispute
+  - export controls
+  - import restrictions
+  - customs duty
+  - anti-dumping
+  - countervailing duties
+  - sanctions
+  - secondary sanctions
+  - trade agreement
+  - free trade agreement
+  - FTA
+  - WTO dispute
+  - supply chain disruption
+  - reshoring
+  - nearshoring
+  - friendshoring
+  - decoupling
+  - de-risking
+  - industrial policy
+  - subsidies
+  - local content rules
+  - export ban
+  - rare earths
+  - semiconductors
+  - critical minerals
+  - steel
+  - aluminum
+  - autos
+  - EVs
+  - solar panels
+  - batteries
+  - LNG
+  - oil trade
+  - grain exports
+  - food exports
+  - shipping lanes
+  - Red Sea shipping
+  - Panama Canal
+  - Suez Canal
+  - Strait of Hormuz
+  - container rates
+  - freight rates
+  - port congestion
+  financial_and_policy_terms:
+  - current account
+  - trade balance
+  - balance of payments
+  - currency pressure
+  - inflation pass-through
+  - import prices
+  - export revenues
+  - commodity exports
+  - trade finance
+  - letters of credit
+  - customs revenue
+  - supply chain finance
+  - sanctions compliance
+  - export licensing
+  - foreign direct investment
+  - FDI
+  - capital controls
+  - foreign exchange reserves
+  event_triggers:
+  - new tariffs
+  - tariff hike
+  - tariff cut
+  - export control package
+  - WTO complaint
+  - trade deal signed
+  - trade negotiations fail
+  - sanctions package
+  - shipping route disruption
+  - port strike
+  - canal disruption
+  - rare earth export ban
+  - chip export ban
+  - customs rule change
+  - import ban
+  - anti-dumping investigation
+  - trade deficit widens
+  - trade surplus narrows
+  - supply chain relocation
+  - new industrial subsidy
+  direct_match_rules:
+    require:
+      any_context_terms: true
+      any_core_terms: true
+  near_miss_rules:
+  - Generic GDP story without trade, exports, imports, tariffs, or supply chain relevance.
+  - Single-company earnings story without broader trade policy or supply chain angle.
+  - Commodity price story without trade flow, sanctions, export ban, or shipping angle.
+  - General diplomacy story without trade agreement, tariffs, sanctions, or export
+    controls.
+  sources: []
+  date_from: null
+  date_to: null
+  default_scan_sources:
+  - market_signals
+  - google_news_rss
+  - official_financial
+  - european_local

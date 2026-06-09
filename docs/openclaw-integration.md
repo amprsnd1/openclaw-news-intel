@@ -13,11 +13,16 @@ Canonical project path: `/path/to/news-intel`.
 
 - `news-intel sources`
 - `news-intel stats`
+- `news-intel source-groups`
+- `news-intel source-health`
 - `news-intel ingest --mode rss`
 - `news-intel ingest --mode all`
 - `news-intel scan --topic "<topic>" --since "<window>"`
 - `news-intel scan --topic "<topic>" --since "<window>" --source rss,google_news_rss`
+- `news-intel scan --topic "<topic>" --since "<window>" --source official_defense,official_eu,defense_specialist,european_local,google_news_rss --min-confidence medium`
+- `news-intel scan --topic "<topic>" --since "<window>" --source market_signals,google_news_rss --min-confidence medium`
 - `news-intel scan --query "<query>" --since "<window>"`
+- `news-intel scan --query "<query>" --since "<window>" --source market_signals,google_news_rss`
 - `news-intel scan --topic "<topic>" --since "<window>" --only-new`
 - `news-intel scan --topic "<topic>" --since "<window>" --min-confidence medium`
 - `news-intel collect --topic "<topic>" --days <number> --max-items <number>`
@@ -55,6 +60,9 @@ Example commands:
 - `news-intel scan --topic "migration_policy_europe" --since "24h"`
 - `news-intel scan --query "NATO troops eastern Europe" --since "24h"`
 - `news-intel scan --topic "europe_ru_war_preparations" --since "6h" --source rss,google_news_rss`
+- `news-intel scan --topic "europe_ru_war_preparations" --since "24h" --min-confidence medium`
+- `news-intel scan --topic "global_trade_and_country_flows" --since "24h" --min-confidence medium`
+- `news-intel scan --query "UK gilts debt issuance fiscal rules" --since "24h" --source market_signals,google_news_rss`
 - `news-intel collect --topic "europe_ru_war_preparations" --days 7 --max-items 50 --max-queries 1 --use-cache-first`
 - `news-intel enrich --topic "europe_ru_war_preparations" --days 30 --adapter fundus --max-items 100 --include-rss`
 - `news-intel digest --topic "europe_ru_war_preparations" --days 7 --include-metadata-only`
@@ -73,8 +81,13 @@ Example commands:
 - GDELT is the primary strategic topic discovery source.
 - RSS-first ingestion remains available as a safe fallback.
 - For quick news monitoring, prefer `scan`.
+- For fast monitoring, use scan with source groups.
+- For strategic defense/security topics, omit `--source` by default; topic defaults include `defense_specialist`, `european_local`, `google_news_rss`, `official_defense`, and `official_eu`.
+- For macro/trade/markets topics, omit `--source` by default; topic defaults include `market_signals`, `official_financial`, and `google_news_rss`.
 - For deeper research, use `collect -> enrich -> digest`.
 - Fundus is not used by default in scan.
+- Google News RSS is metadata/headline discovery only.
+- Official sources are enabled only where stable public feeds are configured; otherwise they remain disabled roadmap placeholders.
 - Fundus is optional enrichment only.
 - No paywall bypassing.
 - No scraping subscription-only content.
@@ -90,6 +103,8 @@ Example commands:
 - Run `news-intel scan --topic "<topic>" --since "24h"` for morning headline checks.
 - Run `news-intel scan --query "<query>" --since "24h"` for free-form monitoring.
 - If RSS coverage looks thin, run `news-intel scan --topic "<topic>" --since "6h" --source rss,google_news_rss`.
+- For defense/security topics, run `news-intel scan --topic "europe_ru_war_preparations" --since "24h" --min-confidence medium`.
+- For macro/trade/markets topics, run `news-intel scan --topic "global_trade_and_country_flows" --since "24h" --min-confidence medium`.
 - Only enrich after a signal needs deeper context.
 
 Natural-language mapping examples:
