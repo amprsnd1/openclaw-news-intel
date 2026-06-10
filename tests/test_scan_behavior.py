@@ -9,7 +9,7 @@ import pytest
 from news_pipeline.cli import cmd_scan, cmd_source_groups, cmd_source_health
 from news_pipeline.config import load_source_groups
 from news_pipeline.normalize import utc_now_iso
-from news_pipeline.scanner import classify_signal, resolve_scan_sources, run_scan
+from news_pipeline.scanner import classify_across_watchlists, classify_signal, render_scan_markdown, resolve_scan_sources, run_scan
 from news_pipeline.storage import Storage
 
 
@@ -112,6 +112,18 @@ def _rss_item(title: str, url: str = "https://bbc.com/news/1", summary: str = ""
         "text": "",
         "language": "en",
         "country": "UK",
+    }
+
+
+def _simple_watchlist(name: str, context: list[str], core: list[str], event: list[str] | None = None, financial: list[str] | None = None) -> dict:
+    return {
+        "name": name,
+        "topic": name,
+        "context_terms": context,
+        "core_terms": core,
+        "event_triggers": event or [],
+        "financial_and_policy_terms": financial or [],
+        "suggested_queries": [],
     }
 
 
@@ -218,7 +230,7 @@ def test_scan_classifies_high_medium_low_and_noise() -> None:
 
     assert high["signal_class"] == "high_signal"
     assert medium["signal_class"] == "medium_signal"
-    assert low["signal_class"] == "low_signal"
+    assert low["signal_class"] == "noise"
     assert noise["signal_class"] == "noise"
 
 
@@ -291,7 +303,7 @@ def test_scan_output_contains_required_fields(monkeypatch, capsys, temp_db_env: 
     assert "Source:" in out
     assert "Time:" in out
     assert "Matched terms:" in out
-    assert "Confidence:" in out
+    assert "Signal:" in out
     assert "Why it matters:" in out
 
 
@@ -364,7 +376,7 @@ def test_source_quality_does_not_promote_shadow_fleet_only_story() -> None:
         _watchlist(core_terms=["shadow fleet", "sanctions enforcement", "air defense"]),
     )
 
-    assert signal["signal_class"] == "low_signal"
+    assert signal["signal_class"] == "noise"
 
 
 def test_financial_market_group_can_scan_trade_watchlist(monkeypatch, storage: Storage) -> None:
@@ -553,3 +565,198 @@ def test_gdelt_restricted_domains_remain_metadata_only(monkeypatch, storage: Sto
     result = run_scan(storage, _sources(), _watchlist(), None, since="24h", sources="gdelt", only_new=False)
 
     assert result["signals"][0]["access_mode"] == "metadata_only"
+
+
+def test_ukraine_financing_rejects_eu_tech_story() -> None:
+    wl = _simple_watchlist("ukraine_financing", ["EU", "Ukraine"], ["loan", "funds"])
+    signal = classify_signal(_rss_item("EU orders Meta to reopen WhatsApp to rival AI assistants"), wl)
+
+    assert signal["signal_class"] == "noise"
+    assert "no Ukraine context" in signal["reject_reason"]
+
+
+def test_ukraine_financing_rejects_hungary_recovery_fund_without_ukraine() -> None:
+    wl = _simple_watchlist("ukraine_financing", ["EU", "Ukraine"], ["loan", "frozen funds"])
+    signal = classify_signal(_rss_item("Hungary submits revised EU recovery plan over frozen funds"), wl)
+
+    assert signal["signal_class"] == "noise"
+    assert "no Ukraine context" in signal["reject_reason"]
+
+
+def test_ukraine_financing_accepts_ukraine_imf_loan() -> None:
+    wl = _simple_watchlist("ukraine_financing", ["Ukraine", "Kyiv"], ["IMF", "loan"])
+    signal = classify_signal(_rss_item("Ukraine secures new IMF loan tranche for budget support"), wl)
+
+    assert signal["signal_class"] in {"medium_signal", "high_signal"}
+    assert "ukraine" in signal["matched_context_terms"]
+
+
+def test_europe_war_prep_rejects_generic_kyiv_battlefield_headline() -> None:
+    signal = classify_signal(_rss_item("Kyiv strikes key Russian supply lines"), _watchlist())
+
+    assert signal["signal_class"] == "noise"
+    assert "no Europe/NATO/member-state context" in signal["reject_reason"]
+
+
+def test_europe_war_prep_accepts_nato_deployment_eastern_europe() -> None:
+    signal = classify_signal(_rss_item("NATO deploys troops to Eastern Europe amid Russia threat"), _watchlist())
+
+    assert signal["signal_class"] in {"medium_signal", "high_signal"}
+    assert signal["missing_required_terms"] == []
+
+
+def test_global_trade_demotes_iran_war_without_flow_terms() -> None:
+    wl = _simple_watchlist("global_trade_and_country_flows", ["Iran", "US"], ["shipping", "tariffs"])
+    signal = classify_signal(_rss_item("US and Iran exchange missile strikes overnight"), wl)
+
+    assert signal["signal_class"] == "noise"
+    assert "no trade" in signal["reject_reason"]
+
+
+def test_global_trade_accepts_hormuz_oil_shipping_disruption() -> None:
+    wl = _simple_watchlist("global_trade_and_country_flows", ["Iran", "Strait of Hormuz"], ["shipping", "oil flows"])
+    signal = classify_signal(_rss_item("Iran threat disrupts Strait of Hormuz shipping and oil flows"), wl)
+
+    assert signal["signal_class"] in {"medium_signal", "high_signal"}
+    assert "shipping" in signal["matched_financial_terms"] or "shipping" in signal["matched_core_terms"]
+
+
+def test_migration_policy_accepts_eu_return_hubs() -> None:
+    wl = _simple_watchlist("migration_policy_europe", ["EU", "Europe"], ["return hubs", "asylum"])
+    signal = classify_signal(_rss_item("EU agrees new return hubs for rejected asylum seekers"), wl)
+
+    assert signal["signal_class"] in {"medium_signal", "high_signal"}
+
+
+def test_migration_policy_rejects_generic_crime_story() -> None:
+    wl = _simple_watchlist("migration_policy_europe", ["UK", "EU"], ["migration", "asylum"])
+    signal = classify_signal(_rss_item("UK police investigate crime involving migrant suspect"), wl)
+
+    assert signal["signal_class"] == "noise"
+    assert "no migration policy term" in signal["reject_reason"]
+
+
+def test_primary_and_secondary_topic_assignment() -> None:
+    iran = _simple_watchlist("iran_war_risk", ["Iran", "US", "Strait of Hormuz"], ["missile strike", "shipping", "US base"])
+    trade = _simple_watchlist("global_trade_and_country_flows", ["Iran", "Strait of Hormuz"], ["shipping"])
+    article = _rss_item("Iran missile strike near US base disrupts Strait of Hormuz shipping")
+
+    routed = classify_across_watchlists(article, [iran, trade], current_watchlist=iran)
+
+    assert routed["primary_topic"] == "iran_war_risk"
+    assert "global_trade_and_country_flows" in routed["secondary_topics"]
+
+
+def test_primary_only_demotes_secondary_topic(monkeypatch, storage: Storage) -> None:
+    iran = _simple_watchlist("iran_war_risk", ["Iran", "US", "Strait of Hormuz"], ["missile strike", "shipping", "US base"])
+    trade = _simple_watchlist("global_trade_and_country_flows", ["Iran", "Strait of Hormuz"], ["shipping"])
+    monkeypatch.setattr(
+        "news_pipeline.scanner.fetch_rss",
+        lambda source_cfg, max_items=50: [_rss_item("Iran missile strike near US base disrupts Strait of Hormuz shipping")],
+    )
+
+    result = run_scan(
+        storage,
+        _sources(),
+        trade,
+        None,
+        since="24h",
+        sources="rss",
+        only_new=False,
+        all_watchlists=[iran, trade],
+        primary_only=True,
+        show_rejected=True,
+    )
+
+    assert result["signals"] == []
+    assert result["rejected"]
+    assert "Primary topic is iran_war_risk" in result["rejected"][0]["reject_reason"]
+
+
+def test_rejected_items_hidden_by_default_and_shown_when_requested(monkeypatch, storage: Storage) -> None:
+    wl = _simple_watchlist("ukraine_financing", ["Ukraine"], ["loan"])
+    monkeypatch.setattr(
+        "news_pipeline.scanner.fetch_rss",
+        lambda source_cfg, max_items=50: [_rss_item("EU orders Meta to reopen WhatsApp to rival AI assistants")],
+    )
+
+    hidden = run_scan(storage, _sources(), wl, None, since="24h", sources="rss", only_new=False, show_rejected=False)
+    shown = run_scan(storage, _sources(), wl, None, since="24h", sources="rss", only_new=False, show_rejected=True)
+
+    assert hidden["rejected"] == []
+    assert hidden["rejected_count"] == 1
+    assert shown["rejected"]
+    assert "Rejected / Demoted" in render_scan_markdown(shown)
+
+
+def test_scan_output_includes_url_topic_summary_and_source_diversity() -> None:
+    result = {
+        "topic": "iran_war_risk",
+        "since": "24h",
+        "sources": ["rss"],
+        "source_groups_used": ["rss"],
+        "new_items_scanned": 1,
+        "scanned_counts": {"rss": 1, "gdelt": 0, "google_news_rss": 0},
+        "source_status": {"rss": "ok", "gdelt": "skipped", "google_news_rss": "skipped", "fundus": "not used for scan"},
+        "warnings": [],
+        "signals": [
+            {
+                "title": "US launches strikes on Iran",
+                "url": "https://example.com/iran",
+                "source": "Example",
+                "published_at": utc_now_iso(),
+                "primary_topic": "iran_war_risk",
+                "secondary_topics": ["global_trade_and_country_flows"],
+                "signal_class": "high_signal",
+                "source_quality": "medium",
+                "matched_terms": ["Iran", "US"],
+                "why": "Direct escalation.",
+            }
+        ],
+        "rejected": [],
+        "rejected_count": 0,
+        "source_diversity_note": "Warning: high alert based on limited source diversity.",
+    }
+
+    out = render_scan_markdown(result)
+
+    assert "[US launches strikes on Iran](https://example.com/iran)" in out
+    assert "Primary topic: iran_war_risk" in out
+    assert "Secondary topics: global_trade_and_country_flows" in out
+    assert "Signal: high_signal" in out
+    assert "## Watchlist Summary" in out
+    assert "Warning: high alert based on limited source diversity." in out
+
+
+def test_all_watchlists_primary_only_cli_runs_without_duplicates(monkeypatch, capsys, temp_db_env: Path) -> None:
+    monkeypatch.setattr(
+        "news_pipeline.scanner.fetch_rss",
+        lambda source_cfg, max_items=50: [_rss_item("Ukraine secures IMF loan tranche for budget support")],
+    )
+    monkeypatch.setattr("news_pipeline.scanner.feedparser.parse", lambda url, **kwargs: type("Feed", (), {"entries": []})())
+
+    rc = cmd_scan(
+        argparse.Namespace(
+            all_watchlists=True,
+            topic=None,
+            query=None,
+            since="24h",
+            max_items=50,
+            source="rss",
+            min_confidence="medium",
+            only_new=False,
+            show_seen=False,
+            show_rejected=False,
+            primary_only=True,
+            format="markdown",
+            max_queries=1,
+            use_cache_first=False,
+        )
+    )
+    out = capsys.readouterr().out
+
+    assert rc == 0
+    assert "# Signal Scan: all-watchlists" in out
+    assert "Primary topic: ukraine_financing" in out
+    assert out.count("Ukraine secures IMF loan tranche for budget support") == 1
+    assert "## Watchlist Summary" in out

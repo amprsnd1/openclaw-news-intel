@@ -1,3 +1,7 @@
+## 0) Morning all-watchlists scan
+
+Run `news-intel scan --all-watchlists --since "24h" --min-confidence medium --primary-only`. Group by primary topic, avoid duplicate headlines, include source diversity notes for high alerts, and return concise markdown.
+
 # OpenClaw Prompt Examples
 
 ## 1) 3-day Ukraine financing digest

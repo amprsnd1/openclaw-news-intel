@@ -20,6 +20,8 @@
 
 ## Fast Signal Runs
 
+- `news-intel scan --all-watchlists --since "24h" --min-confidence medium --primary-only`
+
 - `news-intel scan --topic "europe_ru_war_preparations" --since "2h" --only-new --min-confidence medium`
 - `news-intel scan --topic "europe_ru_war_preparations" --since "24h" --min-confidence medium`
 - `news-intel scan --topic "china_taiwan_risk" --since "6h"`

@@ -22,7 +22,7 @@ from .ingest.gdelt import fetch_gdelt_metadata, gdelt_status
 from .ingest.rss import fetch_rss
 from .normalize import normalize_article, utc_now_iso
 from .relevance import classify_watchlist_article
-from .scanner import render_scan_markdown, run_scan
+from .scanner import render_all_watchlists_scan_markdown, render_scan_markdown, run_scan
 from .storage import Storage
 
 SUPPORTED_MODES = ("rss", "fundus", "gdelt", "all")
@@ -180,6 +180,116 @@ def cmd_search(args: argparse.Namespace) -> int:
 
 def cmd_scan(args: argparse.Namespace) -> int:
     storage, sources, watchlists = _load_runtime()
+    source_groups = load_source_groups()
+    source_quality = load_source_quality()
+    gdelt_config = load_gdelt_config()
+    google_news_config = load_google_news_config()
+
+    if getattr(args, "all_watchlists", False):
+        combined_signals: List[Dict[str, Any]] = []
+        combined_rejected: List[Dict[str, Any]] = []
+        summary: List[Dict[str, Any]] = []
+        statuses: Dict[str, str] = {"rss": "skipped", "google_news_rss": "skipped", "gdelt": "skipped", "fundus": "not used for scan"}
+        warnings: List[str] = []
+        source_refs: List[str] = []
+        scanned_counts = {"rss": 0, "google_news_rss": 0, "gdelt": 0}
+        new_items_scanned = 0
+        diversity_notes: List[str] = []
+        seen_ids: set[str] = set()
+        try:
+            for watchlist in watchlists:
+                result = run_scan(
+                    storage,
+                    sources,
+                    watchlist=watchlist,
+                    query=None,
+                    since=args.since,
+                    max_items=args.max_items,
+                    sources=args.source,
+                    min_confidence=args.min_confidence,
+                    only_new=args.only_new,
+                    show_seen=args.show_seen,
+                    max_queries=args.max_queries,
+                    use_cache_first=args.use_cache_first,
+                    gdelt_config=gdelt_config,
+                    google_news_config=google_news_config,
+                    source_groups=source_groups,
+                    source_quality=source_quality,
+                    all_watchlists=watchlists,
+                    show_rejected=getattr(args, "show_rejected", False),
+                    primary_only=getattr(args, "primary_only", False),
+                )
+                signals = []
+                for row in result.get("signals") or []:
+                    rid = row.get("id") or row.get("url")
+                    if getattr(args, "primary_only", False) and rid in seen_ids:
+                        continue
+                    if rid:
+                        seen_ids.add(rid)
+                    signals.append(row)
+                combined_signals.extend(signals)
+                combined_rejected.extend(result.get("rejected") or [])
+                high = sum(1 for row in signals if row.get("signal_class") == "high_signal")
+                medium = sum(1 for row in signals if row.get("signal_class") == "medium_signal")
+                low = sum(1 for row in signals if row.get("signal_class") == "low_signal")
+                rejected = result.get("rejected_count", len(result.get("rejected") or []))
+                status = "HIGH ALERT" if high >= 3 else "Active" if high or medium else "Quiet" if low else "No direct signals"
+                summary.append(
+                    {
+                        "watchlist": watchlist.get("name"),
+                        "high": high,
+                        "medium": medium,
+                        "low": low,
+                        "rejected": rejected,
+                        "status": status,
+                    }
+                )
+                for key, value in (result.get("source_status") or {}).items():
+                    if value != "skipped":
+                        statuses[key] = value
+                warnings.extend(result.get("warnings") or [])
+                for key in scanned_counts:
+                    scanned_counts[key] += int((result.get("scanned_counts") or {}).get(key, 0))
+                new_items_scanned += int(result.get("new_items_scanned") or 0)
+                for ref in result.get("source_groups_used") or []:
+                    if ref not in source_refs:
+                        source_refs.append(ref)
+                if result.get("source_diversity_note"):
+                    diversity_notes.append(f"{watchlist.get('name')}: {result['source_diversity_note']}")
+        except ValueError as exc:
+            storage.close()
+            print(f"ERROR: {exc}")
+            return 2
+        finally:
+            try:
+                storage.close()
+            except Exception:
+                pass
+
+        combined_signals.sort(
+            key=lambda item: (
+                {"high_signal": 3, "medium_signal": 2, "low_signal": 1}.get(item.get("signal_class"), 0),
+                len(item.get("matched_terms") or []),
+                item.get("published_at", ""),
+            ),
+            reverse=True,
+        )
+        result = {
+            "topic": "all-watchlists",
+            "since": args.since,
+            "sources": source_refs,
+            "source_status": statuses,
+            "warnings": sorted(set(warnings)),
+            "scanned_counts": scanned_counts,
+            "new_items_scanned": new_items_scanned,
+            "signals": combined_signals[: args.max_items],
+            "rejected": combined_rejected[: args.max_items] if getattr(args, "show_rejected", False) else [],
+            "watchlist_summary": summary,
+            "source_diversity_notes": diversity_notes,
+        }
+        print(render_all_watchlists_scan_markdown(result))
+        return 0
+
     watchlist = _find_watchlist(args.topic, watchlists) if args.topic else None
     if args.topic and not watchlist:
         storage.close()
@@ -203,10 +313,13 @@ def cmd_scan(args: argparse.Namespace) -> int:
             show_seen=args.show_seen,
             max_queries=args.max_queries,
             use_cache_first=args.use_cache_first,
-            gdelt_config=load_gdelt_config(),
-            google_news_config=load_google_news_config(),
-            source_groups=load_source_groups(),
-            source_quality=load_source_quality(),
+            gdelt_config=gdelt_config,
+            google_news_config=google_news_config,
+            source_groups=source_groups,
+            source_quality=source_quality,
+            all_watchlists=watchlists,
+            show_rejected=getattr(args, "show_rejected", False),
+            primary_only=getattr(args, "primary_only", False),
         )
     except ValueError as exc:
         storage.close()
@@ -762,12 +875,15 @@ def build_parser() -> argparse.ArgumentParser:
     subject = p_scan.add_mutually_exclusive_group(required=True)
     subject.add_argument("--topic", type=str, help="Watchlist topic name")
     subject.add_argument("--query", type=str, help="Free-form headline query")
+    subject.add_argument("--all-watchlists", action="store_true", help="Scan all configured watchlists")
     p_scan.add_argument("--since", type=str, default="6h", help="Lookback window such as 2h, 24h, or 7d")
     p_scan.add_argument("--max-items", type=int, default=50, help="Maximum signals/items to return")
     p_scan.add_argument("--source", type=str, default=None, help="Comma-separated sources or groups. Omit for topic default scan sources.")
     p_scan.add_argument("--min-confidence", choices=("low", "medium", "high"), default="low", help="Minimum signal tier")
     p_scan.add_argument("--only-new", action="store_true", default=True, help="Hide items already shown by prior scans")
     p_scan.add_argument("--show-seen", action="store_true", help="Show items already returned by prior scans")
+    p_scan.add_argument("--show-rejected", action="store_true", help="Show rejected or demoted candidate headlines with reasons")
+    p_scan.add_argument("--primary-only", action="store_true", help="Show each article only under its primary watchlist topic")
     p_scan.add_argument("--format", choices=("markdown",), default="markdown", help="Output format")
     p_scan.add_argument("--max-queries", type=int, default=1, help="Maximum GDELT/Google query plans to use")
     p_scan.add_argument("--use-cache-first", action="store_true", help="Prefer fresh cached GDELT results")

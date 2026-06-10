@@ -17,6 +17,7 @@ Canonical project path: `/path/to/news-intel`.
 - `news-intel source-health`
 - `news-intel ingest --mode rss`
 - `news-intel ingest --mode all`
+- `news-intel scan --all-watchlists --since "<window>" --min-confidence medium --primary-only`
 - `news-intel scan --topic "<topic>" --since "<window>"`
 - `news-intel scan --topic "<topic>" --since "<window>" --source rss,google_news_rss`
 - `news-intel scan --topic "<topic>" --since "<window>" --source official_defense,official_eu,defense_specialist,european_local,google_news_rss --min-confidence medium`
@@ -127,3 +128,8 @@ Natural-language mapping examples:
 - RSS path should continue operating.
 - Fundus missing: clear error only when fundus mode is explicitly requested.
 - GDELT failure/rate-limit: warn and continue.
+
+
+## Morning Scan Precision
+
+Use `news-intel scan --all-watchlists --since "24h" --min-confidence medium --primary-only` for broad morning monitoring. Use `--show-rejected` on a single topic when investigating why a headline was excluded or demoted. High-alert summaries should mention source diversity.

@@ -137,6 +137,7 @@ news-intel scan --topic "europe_ru_war_preparations" --since "2h"
 news-intel scan --topic "china_taiwan_risk" --since "6h"
 news-intel scan --topic "migration_policy_europe" --since "24h"
 news-intel scan --query "NATO troops eastern Europe" --since "24h"
+news-intel scan --all-watchlists --since "24h" --min-confidence medium --primary-only
 news-intel scan --topic "europe_ru_war_preparations" --since "24h" --min-confidence medium
 news-intel scan --topic "europe_ru_war_preparations" --since "24h" --only-new
 ```
@@ -176,6 +177,8 @@ Source policy:
 - Restricted/paywalled sources are not scraped.
 
 Scan behavior:
+- Morning all-watchlist scans use `--primary-only` to avoid duplicating the same headline across topics.
+- Use `--show-rejected` to inspect rejected or demoted headlines and their reasons.
 - Pulls headline/summary metadata first.
 - Does not require full text.
 - Does not run Fundus by default.

@@ -5,6 +5,7 @@ def test_openclaw_skill_includes_collect_and_enrich_commands() -> None:
     text = Path("openclaw-skills/news-intelligence/SKILL.md").read_text(encoding="utf-8")
     assert "news-intel source-groups" in text
     assert "news-intel source-health" in text
+    assert 'news-intel scan --all-watchlists --since "<window>" --min-confidence medium --primary-only' in text
     assert 'news-intel scan --topic "<topic>" --since "<window>"' in text
     assert 'news-intel scan --topic "<topic>" --since "<window>" --source rss,google_news_rss' in text
     assert 'news-intel scan --topic "<topic>" --since "<window>" --source official_defense,official_eu,defense_specialist,european_local,google_news_rss --min-confidence medium' in text
@@ -13,6 +14,7 @@ def test_openclaw_skill_includes_collect_and_enrich_commands() -> None:
     assert 'news-intel scan --query "<query>" --since "<window>" --source market_signals,google_news_rss' in text
     assert 'news-intel scan --topic "<topic>" --since "<window>" --only-new' in text
     assert 'news-intel scan --topic "<topic>" --since "<window>" --min-confidence medium' in text
+    assert 'news-intel scan --topic "<topic>" --since "<window>" --show-rejected' in text
     assert 'news-intel collect --topic "<topic>" --days <number> --max-items <number>' in text
     assert 'news-intel collect --topic "<topic>" --days <number> --max-items <number> --max-queries <number> --use-cache-first' in text
     assert 'news-intel collect --topic "<topic>" --days <number> --max-items <number> --dry-run-queries' in text
@@ -30,3 +32,7 @@ def test_openclaw_skill_includes_collect_and_enrich_commands() -> None:
     assert "For quick news monitoring, prefer `scan`." in text
     assert 'let topic defaults choose source groups' in text
     assert "Use explicit `--source` only when the user asks for a specific source group." in text
+    assert "For morning scans, prefer primary-only output." in text
+    assert "Do not duplicate the same article across multiple watchlists." in text
+    assert "High-alert claims should mention source diversity." in text
+    assert "Always include real URLs when available." in text
