@@ -1,6 +1,8 @@
 # OpenClaw Integration (Local CLI)
 
 This project is prepared for OpenClaw to call `news-intel` as a local tool.
+
+OpenClaw does not scrape news directly. It calls the local CLI through the News Intelligence skill. The recommended command is `news-intel morning-scan`.
 Canonical project path: `/path/to/news-intel`.
 
 ## Scope
@@ -111,8 +113,8 @@ Example commands:
 
 ## Recommended Fast Signal Workflow
 
-- Run `news-intel scan --topic "<topic>" --since "2h" --only-new --min-confidence medium` for alert-style monitoring.
-- Run `news-intel morning-scan` for morning headline checks.
+- Run `news-intel morning-scan` for the default morning briefing.
+- Run `news-intel scan --topic "<topic>" --since "2h" --only-new --min-confidence medium` for alert-style single-topic monitoring.
 - Explicit equivalent: `news-intel scan --all-watchlists --since "24h" --min-confidence medium --group-by-primary --fresh`.
 - Run `news-intel scan --query "<query>" --since "24h"` for free-form monitoring.
 - If RSS coverage looks thin, run `news-intel scan --topic "<topic>" --since "6h" --source rss,google_news_rss`.
@@ -130,6 +132,8 @@ Natural-language mapping examples:
 - "anything new on Europe-Russia war prep?" -> `news-intel scan --topic "europe_ru_war_preparations" --since "2h" --only-new --min-confidence medium`
 
 ## Recommended Strategic Workflow
+
+Research mode is advanced and should be used after a signal appears or when the user asks for a deep briefing. It is not the default morning workflow.
 
 - Run `news-intel collect --topic "<topic>" --days 7 --max-items 50 --max-queries 1 --use-cache-first`.
 - Run `news-intel enrich --topic "<topic>" --days 30 --adapter fundus --max-items 100 --include-rss`.

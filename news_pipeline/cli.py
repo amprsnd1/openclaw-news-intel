@@ -1063,7 +1063,7 @@ def cmd_stats(_: argparse.Namespace) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="news-intel", description="Local news intelligence pipeline MVP")
+    parser = argparse.ArgumentParser(prog="news-intel", description="Local headline signal scanner for OpenClaw agents. Start with: news-intel morning-scan")
     sub = parser.add_subparsers(dest="command", required=True)
 
     p_ingest = sub.add_parser("ingest", help="Fetch and store new articles")
@@ -1132,7 +1132,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_scan.add_argument("--fresh-max-items", type=int, default=200, help="RSS max items per source for --fresh")
     p_scan.set_defaults(func=cmd_scan)
 
-    p_morning = sub.add_parser("morning-scan", help="Run fresh RSS ingest then all-watchlists morning signal scan")
+    p_morning = sub.add_parser("morning-scan", help="Primary workflow: fresh RSS ingest plus all-watchlists morning signal scan")
     p_morning.add_argument("--since", type=str, default="24h", help="Lookback window such as 24h or 7d")
     p_morning.add_argument("--min-confidence", choices=("low", "medium", "high"), default="medium", help="Minimum signal tier")
     p_morning.add_argument("--max-items", type=int, default=200, help="Fresh RSS ingest max items per source")

@@ -10,6 +10,7 @@
 
 ## Routine Run
 
+- `news-intel morning-scan`
 - `news-intel scan --topic "<topic>" --since "2h" --only-new --min-confidence medium`
 - `news-intel source-groups`
 - `news-intel source-health`
@@ -38,7 +39,10 @@
 
 Use scan for headlines, alerts, quick monitoring, and early signal detection. Use collect/enrich/digest for deeper research and weekly review.
 
-## Strategic Digest Runs
+## Strategic Digest Runs (Advanced)
+
+Use this after a signal appears or for a weekly/deep research briefing. It is not the default morning workflow.
+
 
 - `news-intel collect --topic "europe_ru_war_preparations" --days 7 --max-items 50 --max-queries 1 --use-cache-first`
 - `news-intel enrich --topic "europe_ru_war_preparations" --days 30 --adapter fundus --max-items 100 --include-rss`

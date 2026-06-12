@@ -15,7 +15,7 @@ Run `news-intel morning-scan`. This refreshes RSS first, then scans all watchlis
 
 ## 1a) Morning headline signals
 
-"Use the News Intelligence skill. Run `news-intel scan --topic \"europe_ru_war_preparations\" --since \"24h\" --only-new --min-confidence medium`. Return a compact alert briefing with high and medium signals, source status, and gaps. Do not enrich unless I ask."
+"Use the News Intelligence skill. Run morning scan." Return a compact alert briefing with high and medium signals, source status, and gaps. Do not enrich unless I ask."
 
 ## 1b) Last 2-hour signal check
 
@@ -33,7 +33,7 @@ Run `news-intel morning-scan`. This refreshes RSS first, then scans all watchlis
 
 "Run `news-intel search \"Ukraine IMF loan\"` and summarize top matches with matched terms."
 
-## 4) Europe Russia war preparations digest
+## 4) Europe Russia war preparations deep research digest
 
 "Run `news-intel collect --topic \"europe_ru_war_preparations\" --days 7 --max-items 50 --max-queries 1 --use-cache-first`, then `news-intel enrich --topic \"europe_ru_war_preparations\" --days 30 --adapter fundus --max-items 100 --include-rss`, then `news-intel digest --topic \"europe_ru_war_preparations\" --days 7 --include-metadata-only`. Return a concise briefing with source-linked items, access mode, enrichment status, confidence tier, and escalation-readiness signals. Report any GDELT cache usage, rate limits, and Fundus eligibility breakdown if enriched=0."
 

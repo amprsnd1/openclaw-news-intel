@@ -2,7 +2,19 @@
 
 `news-intel` is a local headline signal scanner and news intelligence connector for OpenClaw agents.
 
-## Install the Local CLI
+OpenClaw does not scrape news directly. It calls the local `news-intel` CLI through the News Intelligence skill.
+
+## Primary workflow
+
+Use this for morning monitoring:
+
+```bash
+news-intel morning-scan
+```
+
+This refreshes RSS, scans watchlists, clusters related headlines, and returns a compact briefing.
+
+## Install the local CLI
 
 ```bash
 bash scripts/setup.sh
@@ -11,7 +23,7 @@ news-intel doctor
 news-intel morning-scan
 ```
 
-## Install the OpenClaw Skill
+## Install the OpenClaw skill
 
 ```bash
 bash scripts/install_openclaw_skill.sh
@@ -26,12 +38,22 @@ openclaw start
 openclaw skills info news-intelligence
 ```
 
-## Example Prompts
+## Example prompts
 
 - Use News Intelligence. Run morning scan.
 - Use News Intelligence. Scan Iran war risk for the last 24h.
 - Use News Intelligence. Search local database for Ukraine IMF loan.
 - Use News Intelligence. Run a deep digest for Europe-Russia war preparations.
+
+## Advanced research prompt
+
+Use research mode only when a deeper briefing is needed:
+
+```text
+Use News Intelligence. Run a deep digest for Europe-Russia war preparations.
+```
+
+OpenClaw should map that to `collect -> enrich -> digest`, not to the default morning scan.
 
 ## Troubleshooting
 

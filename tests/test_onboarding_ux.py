@@ -134,12 +134,18 @@ def test_install_openclaw_skill_script_uses_valid_extra_dirs_schema() -> None:
 
 def test_readme_includes_quickstart_command_map_and_source_access_model() -> None:
     text = Path("README.md").read_text(encoding="utf-8")
+    assert text.startswith("# news-intel")
+    assert "Local headline signal scanner and news intelligence connector for OpenClaw agents." in text
     assert "## Quickstart" in text
     assert "news-intel doctor" in text
     assert "news-intel morning-scan" in text
     assert "## Which command should I use?" in text
-    assert "## Source Access Model" in text
+    assert "## Source access model" in text
     assert "This project does not bypass paywalls" in text
+    assert "## Research mode, advanced" in text
+    assert "Research mode is the advanced workflow" in text
+    assert "It is not the default morning workflow." in text
+    assert "| Daily morning briefing | `news-intel morning-scan` |" in text
 
 
 def test_openclaw_docs_include_morning_scan_usage() -> None:
@@ -147,3 +153,13 @@ def test_openclaw_docs_include_morning_scan_usage() -> None:
     assert "bash scripts/install_openclaw_skill.sh" in text
     assert "news-intel doctor" in text
     assert "Use News Intelligence. Run morning scan." in text
+    assert "OpenClaw does not scrape news directly." in text
+
+
+def test_architecture_doc_exists_and_describes_main_flows() -> None:
+    text = Path("docs/architecture.md").read_text(encoding="utf-8")
+    assert "# Architecture" in text
+    assert "Sources -> scan -> watchlists -> routing -> clusters -> briefing" in text
+    assert "collect -> enrich -> digest" in text
+    assert "OpenClaw does not scrape news directly." in text
+    assert "No component should bypass paywalls" in text
