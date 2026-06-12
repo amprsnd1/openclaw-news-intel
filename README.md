@@ -14,7 +14,9 @@ Research mode still exists, but it is the advanced deep-dive path after a signal
 
 ## Status
 
-Private beta / local-first MVP.
+Public beta candidate / local-first beta.
+
+Package version: `0.2.0-beta.1`.
 
 ## What it does
 
@@ -314,4 +316,4 @@ Local runtime files are intentionally ignored: `.venv/`, `data/*.sqlite`, logs, 
 
 ## License
 
-No license file is currently included. Add one before public distribution.
+MIT

@@ -260,6 +260,8 @@ def test_readme_includes_quickstart_command_map_and_source_access_model() -> Non
     text = Path("README.md").read_text(encoding="utf-8")
     assert text.startswith("# news-intel")
     assert "Local headline signal scanner and news intelligence connector for OpenClaw agents." in text
+    assert "Public beta candidate / local-first beta." in text
+    assert "Package version: `0.2.0-beta.1`." in text
     assert "## Quickstart" in text
     assert "cd openclaw-news-intel" in text
     assert "## Path convention" in text
@@ -277,7 +279,18 @@ def test_readme_includes_quickstart_command_map_and_source_access_model() -> Non
     assert "Research mode is the advanced workflow" in text
     assert "It is not the default morning workflow." in text
     assert "| Daily morning briefing | `news-intel morning-scan` |" in text
+    assert "## License" in text
+    assert "MIT" in text
     assert LOCAL_REPO_PATH not in text
+
+
+def test_project_metadata_has_public_beta_license_and_version() -> None:
+    pyproject = Path("pyproject.toml").read_text(encoding="utf-8")
+    license_text = Path("LICENSE").read_text(encoding="utf-8")
+    assert 'version = "0.2.0-beta.1"' in pyproject
+    assert 'license = { text = "MIT" }' in pyproject
+    assert "MIT License" in license_text
+    assert "Copyright (c) 2026 ampersand" in license_text
 
 
 def test_openclaw_docs_include_morning_scan_usage() -> None:
