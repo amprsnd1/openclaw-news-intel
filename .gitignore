@@ -13,6 +13,7 @@ venv/
 data/*.sqlite
 data/*.sqlite-shm
 data/*.sqlite-wal
+*.db
 
 # Env files
 .env
@@ -40,3 +41,8 @@ id_ed25519
 
 # Logs
 *.log
+
+# OS/cache/temp
+.DS_Store
+cache/
+tmp/

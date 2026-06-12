@@ -2,8 +2,10 @@
 
 ## Before Use
 
+- `bash scripts/install_openclaw_skill.sh` if OpenClaw should use the skill.
 - `bash scripts/setup.sh`
 - `bash scripts/smoke_test.sh`
+- `news-intel doctor`
 - Confirm `news-intel sources` reports `rss: available`.
 
 ## Routine Run

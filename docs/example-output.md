@@ -1,0 +1,38 @@
+# Example Morning Scan Output
+
+```text
+# Watchlist Signal Scan - Last 24h
+Items scanned: 214
+Signals found: 12
+Clusters found: 4
+
+## Top Alerts
+- HIGH: US-Iran military escalation, 6 headlines, 4 sources
+- MEDIUM: EU migration return hubs, 2 headlines, 2 sources
+
+## Watchlist Sections
+### iran_war_risk
+#### Cluster: US-Iran military escalation
+Sources: Defense News, DW, France 24, The War Zone
+Headlines: 6
+Latest: 2026-06-12 08:30
+Source diversity: confirmed cluster
+Key headlines:
+- [US says forces intercepted Iranian missiles](https://example.com/article)
+- [Iran warns of retaliation after regional strikes](https://example.com/article-2)
+Spillover:
+- Oil / Hormuz risk
+- Regional base security
+
+## Watchlist Summary
+| Watchlist | High | Medium | Low | Rejected | Status |
+|----------|------|--------|-----|----------|--------|
+| iran_war_risk | 6 | 1 | 0 | 2 | HIGH ALERT |
+| ukraine_financing | 0 | 0 | 0 | 3 | No direct signals |
+
+## Source Limits
+- RSS: ok
+- Google News RSS: metadata-only headline discovery
+- GDELT: skipped / cache / rate-limited if reported
+- Fundus: not used for scan
+```

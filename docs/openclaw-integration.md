@@ -9,14 +9,25 @@ Canonical project path: `/path/to/news-intel`.
 - No automatic code changes.
 - No automatic wiring or daemon setup.
 
+## OpenClaw Setup
+
+```bash
+bash scripts/install_openclaw_skill.sh
+openclaw skills info news-intelligence
+```
+
+If the skill is stale or not visible, restart OpenClaw with `openclaw stop` then `openclaw start`. Run `news-intel doctor` to check local CLI, config, adapters, and skill visibility.
+
 ## Safe Command Set
 
+- `news-intel doctor`
 - `news-intel sources`
 - `news-intel stats`
 - `news-intel source-groups`
 - `news-intel source-health`
 - `news-intel ingest --mode rss`
 - `news-intel ingest --mode all`
+- `news-intel morning-scan`
 - `news-intel scan --all-watchlists --since "<window>" --min-confidence medium --group-by-primary`
 - `news-intel scan --topic "<topic>" --since "<window>"`
 - `news-intel scan --topic "<topic>" --since "<window>" --source rss,google_news_rss`

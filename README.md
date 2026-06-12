@@ -4,6 +4,36 @@ Headline signal scanner and local news intelligence pipeline designed for OpenCl
 
 `news-intel` scans fresh public/legal headlines for watchlist signals, stores normalized metadata in SQLite, and can escalate from compact alert-style scans to deeper collection, enrichment, search, and digest workflows.
 
+## Mental Model
+
+`Sources -> Scan -> Watchlists -> Signals -> OpenClaw briefing`
+
+RSS, Google News RSS, and GDELT discover fresh headlines and metadata. Watchlists define what to monitor. `scan` and `morning-scan` are for fast headline signals. `collect -> enrich -> digest` is for deeper research. Fundus optionally enriches public supported articles after a signal is found. Restricted outlets remain metadata-only unless licensed API access is configured.
+
+## Quickstart
+
+```bash
+git clone <repo-url>
+cd openclaw-news-intel
+bash scripts/setup.sh
+source .venv/bin/activate
+news-intel doctor
+news-intel morning-scan
+```
+
+Optional OpenClaw setup:
+
+```bash
+bash scripts/install_openclaw_skill.sh
+openclaw skills info news-intelligence
+```
+
+Then ask OpenClaw:
+
+```text
+Use News Intelligence. Run morning scan.
+```
+
 ## What This Project Does
 
 - Scans fresh RSS/metadata headlines for topic signals.
@@ -118,13 +148,59 @@ bash scripts/setup.sh
 export NEWS_PIPELINE_DB=data/news.sqlite
 ```
 
+
+## Which command should I use?
+
+Morning headlines:
+
+```bash
+news-intel morning-scan
+```
+
+Scan one watchlist:
+
+```bash
+news-intel scan --topic "iran_war_risk" --since "24h"
+```
+
+Scan a free-form query:
+
+```bash
+news-intel scan --query "NATO troops eastern Europe" --since "24h"
+```
+
+Search local database:
+
+```bash
+news-intel search "Ukraine IMF loan" --mode precise
+```
+
+Deep research workflow:
+
+```bash
+news-intel collect --topic "<topic>" --days 7 --max-items 30 --max-queries 1 --use-cache-first
+news-intel enrich --topic "<topic>" --days 30 --adapter fundus --max-items 50 --include-rss
+news-intel digest --topic "<topic>" --days 7 --include-metadata-only
+```
+
+Check setup and sources:
+
+```bash
+news-intel doctor
+news-intel sources
+news-intel source-groups
+news-intel source-health
+```
+
 ## CLI Usage
 
 ### Source health
 
 ```bash
+news-intel doctor
 news-intel sources
 news-intel source-groups
+news-intel source-health
 news-intel stats
 ```
 
@@ -305,6 +381,10 @@ Digest items include access mode, discovery source, enrichment status, relevance
 
 Allowed command set is intentionally narrow and safe for research-grade operation.
 
+## Example Output
+
+See `docs/example-output.md` for a compact morning scan example with top alerts, clusters, source counts, watchlist summary, and source limits.
+
 ## Verification
 
 Run tests:
@@ -329,25 +409,28 @@ news-intel search "Ukraine"
 news-intel digest --topic "ukraine_financing" --days 3
 ```
 
-## Legal and Access Policy
 
-This project is intentionally constrained to public/legal access paths.
+## Source Access Model
 
-- Keep RSS as the core ingestion path.
-- Keep Fundus and GDELT optional.
-- Do not bypass publisher restrictions.
-- Treat restricted outlets as metadata-only unless licensed API access exists.
+- RSS/public feeds: headline and public metadata.
+- Google News RSS: metadata/headline discovery only.
+- GDELT: metadata discovery; it can rate-limit and should be queried conservatively.
+- Fundus: optional public article enrichment for supported publishers.
+- Reuters, Bloomberg, FT, WSJ, and Dow Jones: metadata-only unless licensed API access is configured.
+
+Paywall policy: This project does not bypass paywalls, logins, publisher restrictions, or subscription-only access. It is not a Reuters/Bloomberg scraper, a full-text news API, or a hosted production SaaS.
 
 ## Troubleshooting
 
-- `news-intel: command not found`:
-  activate `.venv` and reinstall editable package.
-- `pip install -e .` fails:
-  upgrade `pip setuptools wheel` first.
-- `fundus` mode fails:
-  install optional extra `.[fundus]` and required host libs.
-- `gdelt` warnings:
-  expected under timeout/rate-limit conditions; RSS path should still work.
+- `news-intel: command not found`: activate `.venv`, run `python3 -m pip install -e .`, or check `which news-intel`.
+- `news-intel doctor` reports degraded: read the degraded issue list. Fundus unavailable, GDELT 429, and missing OpenClaw registration are non-fatal for local scans.
+- Fundus unavailable: install the optional extra with `python3 -m pip install -e ".[fundus]"`; on macOS native dependency errors, run `brew install lz4 xz zstd` and retry with Homebrew include/library flags.
+- GDELT HTTP 429: wait and retry later with `--max-queries 1 --use-cache-first`; RSS and Google News RSS scans should still work.
+- `morning-scan` returns zero signals: zero can be normal when no high/medium signals are present. To inspect more, run `news-intel morning-scan --show-seen` or `news-intel scan --all-watchlists --since "24h" --min-confidence low --group-by-primary --show-rejected --show-seen`.
+- OpenClaw skill not visible: run `bash scripts/install_openclaw_skill.sh`, then `openclaw skills info news-intelligence`; restart with `openclaw stop` and `openclaw start` if stale.
+- OpenClaw uses a stale skill: compare `openclaw-skills/news-intelligence/SKILL.md` with `~/.openclaw/custom-skills/news-intelligence/SKILL.md`, then rerun the install script.
+- Google News RSS cache only: cached metadata is acceptable for scans; rerun later if query feeds return no new entries.
+- No URLs in output: scan output uses markdown links when URLs are available; URL-less source records are shown as unavailable rather than fabricated.
 
 ## License
 

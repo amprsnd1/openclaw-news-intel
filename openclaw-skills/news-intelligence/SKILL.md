@@ -15,6 +15,7 @@ news-intel
 ## Allowed commands
 Only use the following commands:
 ```bash
+news-intel doctor
 news-intel sources
 news-intel stats
 news-intel source-groups
@@ -108,6 +109,10 @@ news-intel digest --topic "migration_policy_europe" --days 7
 news-intel digest --topic "global_trade_and_country_flows" --days 7
 ```
 ## Recommended workflow
+For setup diagnostics, run:
+```bash
+news-intel doctor
+```
 For a source health check, run:
 ```bash
 news-intel sources

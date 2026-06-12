@@ -4,6 +4,11 @@ Run `news-intel morning-scan`. This refreshes RSS first, then scans all watchlis
 
 # OpenClaw Prompt Examples
 
+## 0a) Setup diagnostics
+
+"Use the News Intelligence skill. Run setup diagnostics with `news-intel doctor`. Report whether the setup is usable, degraded, or broken. Do not modify code."
+
+
 ## 1) 3-day Ukraine financing digest
 
 "Run `news-intel ingest --mode rss` then `news-intel digest --topic \"ukraine_financing\" --days 3`. Return concise markdown with source, date, title, and URL."

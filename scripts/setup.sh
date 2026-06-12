@@ -30,4 +30,25 @@ source .venv/bin/activate
 python3 -m pip install --upgrade pip setuptools wheel
 python3 -m pip install -e .
 
-echo "Setup complete. Next run: bash scripts/smoke_test.sh"
+cat <<'EOF'
+Setup complete.
+
+Next steps:
+  source .venv/bin/activate
+  news-intel doctor
+  news-intel morning-scan
+
+Optional OpenClaw skill install:
+  bash scripts/install_openclaw_skill.sh
+  openclaw skills info news-intelligence
+
+Optional Fundus enrichment:
+  python3 -m pip install -e ".[fundus]"
+
+If Fundus native dependency errors occur on macOS:
+  brew install lz4 xz zstd
+  CPPFLAGS="-I/opt/homebrew/include" LDFLAGS="-L/opt/homebrew/lib" python3 -m pip install -e ".[fundus]"
+
+Verification:
+  bash scripts/smoke_test.sh
+EOF

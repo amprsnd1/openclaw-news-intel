@@ -1,6 +1,10 @@
 from __future__ import annotations
 
 import argparse
+import shutil
+import subprocess
+import sys
+from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
 from .collector import RESTRICTED_DOMAINS, access_mode_for_url, build_gdelt_topic_query_plan, collect_topic, enrich_topic
@@ -49,6 +53,38 @@ def _adapter_statuses() -> Dict[str, Dict[str, Any]]:
         "fundus": fundus_status(),
         "gdelt": gdelt_status(),
     }
+
+
+def _project_root() -> Path:
+    return Path(__file__).resolve().parents[1]
+
+
+def _openclaw_paths() -> Dict[str, Path]:
+    home = Path.home()
+    return {
+        "project_skill": _project_root() / "openclaw-skills" / "news-intelligence" / "SKILL.md",
+        "runtime_skill": home / ".openclaw" / "custom-skills" / "news-intelligence" / "SKILL.md",
+        "config": home / ".openclaw" / "openclaw.json",
+    }
+
+
+def _detect_openclaw_registration() -> str:
+    if not shutil.which("openclaw"):
+        return "not detected (openclaw command not found)"
+    try:
+        result = subprocess.run(
+            ["openclaw", "skills", "info", "news-intelligence"],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=8,
+        )
+    except Exception as exc:
+        return f"not detected ({exc})"
+    output = f"{result.stdout}\n{result.stderr}".lower()
+    if result.returncode == 0 and ("ready" in output or "visible to model" in output or "available as command" in output):
+        return "detected"
+    return "not detected"
 
 
 def _select_sources_by_mode(sources: List[Dict[str, Any]], mode: str) -> List[Dict[str, Any]]:
@@ -851,6 +887,131 @@ def cmd_source_health(_: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_doctor(_: argparse.Namespace) -> int:
+    fatal: List[str] = []
+    degraded: List[str] = []
+    root = _project_root()
+    config_files = [root / "config" / "sources.yaml", root / "config" / "watchlists.yaml"]
+    db_path = resolve_db_path()
+
+    cli_path = shutil.which("news-intel") or sys.argv[0]
+    config_ok = all(path.exists() for path in config_files)
+    if not config_ok:
+        missing = ", ".join(str(path) for path in config_files if not path.exists())
+        fatal.append(f"missing config file(s): {missing}")
+
+    sources: List[Dict[str, Any]] = []
+    watchlists: List[Dict[str, Any]] = []
+    source_groups: Dict[str, Dict[str, Any]] = {}
+    gdelt_runtime: Dict[str, Any] = {}
+    database_ok = False
+    rss_ok = False
+    google_ok = False
+    watchlists_ok = False
+    groups_ok = False
+
+    try:
+        if config_ok:
+            sources = load_sources()
+            watchlists = load_watchlists()
+            source_groups = load_source_groups()
+            google_cfg = load_google_news_config()
+            rss_ok = any(s.get("enabled", True) and s.get("adapter", "rss") == "rss" for s in sources)
+            google_ok = bool(google_cfg.get("enabled", True))
+            watchlists_ok = bool(watchlists)
+            groups_ok = bool(source_groups)
+            if not rss_ok:
+                fatal.append("no enabled RSS sources configured")
+            if not watchlists_ok:
+                fatal.append("no watchlists loaded")
+            if not groups_ok:
+                fatal.append("no source groups loaded")
+    except Exception as exc:
+        fatal.append(f"config load failed: {exc}")
+
+    storage: Storage | None = None
+    try:
+        storage = Storage(db_path)
+        storage.init_db()
+        stats = storage.stats()
+        gdelt_runtime = stats.get("gdelt_runtime") or {}
+        database_ok = True
+    except Exception as exc:
+        fatal.append(f"database check failed: {exc}")
+    finally:
+        if storage is not None:
+            try:
+                storage.close()
+            except Exception:
+                pass
+
+    statuses = _adapter_statuses()
+    gdelt = statuses["gdelt"]
+    fundus = statuses["fundus"]
+    if not fundus.get("available"):
+        degraded.append("Fundus unavailable")
+    if not gdelt.get("available"):
+        degraded.append("GDELT unavailable")
+    if gdelt_runtime.get("last_429_time"):
+        degraded.append("GDELT recently rate-limited")
+
+    paths = _openclaw_paths()
+    project_skill_found = paths["project_skill"].exists()
+    runtime_skill_found = paths["runtime_skill"].exists()
+    registration = _detect_openclaw_registration()
+    if not project_skill_found:
+        degraded.append("OpenClaw project skill missing")
+    if not runtime_skill_found:
+        degraded.append("OpenClaw runtime skill missing")
+    if registration != "detected":
+        degraded.append("OpenClaw skill registration not detected")
+
+    gdelt_message = "available" if gdelt.get("available") else "unavailable"
+    if gdelt_runtime.get("last_429_time"):
+        gdelt_message += f", last 429: {gdelt_runtime.get('last_429_time')}, retry later"
+    else:
+        gdelt_message += f" ({gdelt.get('message', '')})"
+    fundus_message = "available" if fundus.get("available") else f"unavailable ({fundus.get('message', '')})"
+
+    status_label = "broken" if fatal else "degraded" if degraded else "usable"
+    lines = [
+        "news-intel doctor",
+        "Core:",
+        f"  Python: ok ({sys.version.split()[0]})",
+        f"  CLI: {'ok' if cli_path else 'missing'} ({cli_path or '-'})",
+        f"  Config: {'ok' if config_ok else 'missing'}",
+        f"  Database: {'ok' if database_ok else 'broken'} ({db_path})",
+        f"  Watchlists: {'ok' if watchlists_ok else 'missing'} ({len(watchlists)})",
+        f"  Source groups: {'ok' if groups_ok else 'missing'} ({len(source_groups)})",
+        "Adapters:",
+        f"  RSS: {'ok' if rss_ok else 'missing'}",
+        f"  Google News RSS: {'ok' if google_ok else 'disabled'}",
+        f"  GDELT: {gdelt_message}",
+        f"  Fundus: {fundus_message}",
+        "OpenClaw:",
+        f"  Project skill: {'found' if project_skill_found else 'missing'} ({paths['project_skill']})",
+        f"  Runtime skill: {'found' if runtime_skill_found else 'missing'} ({paths['runtime_skill']})",
+        f"  Registration: {registration}",
+        "  Recommended command: news-intel morning-scan",
+    ]
+    if fatal:
+        lines.append("Fatal issues:")
+        for item in fatal:
+            lines.append(f"  - {item}")
+    if degraded:
+        lines.append("Degraded issues:")
+        for item in degraded:
+            lines.append(f"  - {item}")
+    lines.append(f"Status: {status_label}")
+    print("\n".join(lines))
+
+    if fatal:
+        return 1
+    if degraded:
+        return 2
+    return 0
+
+
 def cmd_stats(_: argparse.Namespace) -> int:
     storage, _, _ = _load_runtime()
     statuses = _adapter_statuses()
@@ -996,6 +1157,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_source_health = sub.add_parser("source-health", help="Report local/cached source coverage diagnostics")
     p_source_health.set_defaults(func=cmd_source_health)
+
+    p_doctor = sub.add_parser("doctor", help="Diagnose local setup, adapters, database, and OpenClaw skill visibility")
+    p_doctor.set_defaults(func=cmd_doctor)
 
     p_stats = sub.add_parser("stats", help="Pipeline stats")
     p_stats.set_defaults(func=cmd_stats)
