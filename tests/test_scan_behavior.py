@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from news_pipeline.cli import cmd_scan, cmd_source_groups, cmd_source_health
+from news_pipeline.cli import cmd_morning_scan, cmd_scan, cmd_source_groups, cmd_source_health
 from news_pipeline.config import load_source_groups
 from news_pipeline.normalize import utc_now_iso
 from news_pipeline.scanner import (
@@ -961,3 +961,138 @@ def test_all_watchlists_renderer_outputs_links_clusters_and_spillover() -> None:
     assert "[US launches missile strikes on Iran](https://example.com/iran-1)" in out
     assert "## Market / Energy Spillover" in out
     assert out.count("US launches missile strikes on Iran") >= 1
+
+
+def test_scan_fresh_runs_ingest_before_all_watchlists_scan(monkeypatch, capsys, temp_db_env: Path) -> None:
+    calls: list[tuple[str, int]] = []
+
+    def fake_ingest(storage, sources, watchlists, mode, max_items, topic=None):
+        calls.append((mode, max_items))
+        return {"mode": mode, "inserted": 3, "skipped": 2, "matched": 1, "warnings": []}
+
+    monkeypatch.setattr("news_pipeline.cli._run_ingest", fake_ingest)
+    monkeypatch.setattr("news_pipeline.scanner.fetch_rss", lambda source_cfg, max_items=50: [_rss_item("Ukraine secures IMF loan tranche for budget support")])
+    monkeypatch.setattr("news_pipeline.scanner.feedparser.parse", lambda url, **kwargs: type("Feed", (), {"entries": []})())
+
+    rc = cmd_scan(
+        argparse.Namespace(
+            all_watchlists=True,
+            topic=None,
+            query=None,
+            since="24h",
+            max_items=50,
+            source="rss",
+            min_confidence="medium",
+            only_new=False,
+            show_seen=False,
+            show_rejected=False,
+            primary_only=False,
+            group_by_primary=True,
+            format="markdown",
+            max_queries=1,
+            use_cache_first=False,
+            fresh=True,
+            fresh_max_items=200,
+        )
+    )
+    out = capsys.readouterr().out
+
+    assert rc == 0
+    assert calls == [("rss", 200)]
+    assert "Fresh ingest: ran" in out
+    assert "RSS items inserted: 3" in out
+    assert "RSS items skipped: 2" in out
+    assert "RSS warnings: 0" in out
+
+
+def test_scan_fresh_continues_with_ingest_warning(monkeypatch, capsys, temp_db_env: Path) -> None:
+    monkeypatch.setattr(
+        "news_pipeline.cli._run_ingest",
+        lambda *args, **kwargs: {"mode": "rss", "inserted": 0, "skipped": 0, "matched": 0, "warnings": ["RSS ingest failed for Example: timeout"]},
+    )
+    monkeypatch.setattr("news_pipeline.scanner.fetch_rss", lambda source_cfg, max_items=50: [])
+
+    rc = cmd_scan(
+        argparse.Namespace(
+            all_watchlists=True,
+            topic=None,
+            query=None,
+            since="24h",
+            max_items=50,
+            source="rss",
+            min_confidence="medium",
+            only_new=False,
+            show_seen=False,
+            show_rejected=False,
+            primary_only=False,
+            group_by_primary=True,
+            format="markdown",
+            max_queries=1,
+            use_cache_first=False,
+            fresh=True,
+            fresh_max_items=200,
+        )
+    )
+    out = capsys.readouterr().out
+
+    assert rc == 0
+    assert "Fresh ingest: ran" in out
+    assert "RSS warnings: 1" in out
+    assert "RSS warning detail: RSS ingest failed for Example: timeout" in out
+
+
+def test_morning_scan_runs_fresh_ingest_and_all_watchlists(monkeypatch, capsys, temp_db_env: Path) -> None:
+    calls: list[tuple[str, int]] = []
+
+    def fake_ingest(storage, sources, watchlists, mode, max_items, topic=None):
+        calls.append((mode, max_items))
+        return {"mode": mode, "inserted": 4, "skipped": 1, "matched": 1, "warnings": []}
+
+    monkeypatch.setattr("news_pipeline.cli._run_ingest", fake_ingest)
+    monkeypatch.setattr("news_pipeline.scanner.fetch_rss", lambda source_cfg, max_items=50: [_rss_item("Ukraine secures IMF loan tranche for budget support")])
+    monkeypatch.setattr("news_pipeline.scanner.feedparser.parse", lambda url, **kwargs: type("Feed", (), {"entries": []})())
+
+    rc = cmd_morning_scan(
+        argparse.Namespace(
+            since="24h",
+            min_confidence="medium",
+            max_items=200,
+            show_rejected=False,
+            show_seen=False,
+            source="rss",
+        )
+    )
+    out = capsys.readouterr().out
+
+    assert rc == 0
+    assert calls == [("rss", 200)]
+    assert "# Watchlist Signal Scan - Last 24h" in out
+    assert "Fresh ingest: ran" in out
+    assert "Primary topic: ukraine_financing" in out
+
+
+def test_morning_scan_passes_show_rejected_and_show_seen(monkeypatch, temp_db_env: Path) -> None:
+    captured = {}
+
+    def fake_cmd_scan(args):
+        captured["show_rejected"] = args.show_rejected
+        captured["show_seen"] = args.show_seen
+        captured["fresh"] = args.fresh
+        captured["all_watchlists"] = args.all_watchlists
+        return 0
+
+    monkeypatch.setattr("news_pipeline.cli.cmd_scan", fake_cmd_scan)
+
+    rc = cmd_morning_scan(
+        argparse.Namespace(
+            since="24h",
+            min_confidence="medium",
+            max_items=200,
+            show_rejected=True,
+            show_seen=True,
+            source=None,
+        )
+    )
+
+    assert rc == 0
+    assert captured == {"show_rejected": True, "show_seen": True, "fresh": True, "all_watchlists": True}

@@ -133,11 +133,12 @@ news-intel stats
 Use `scan` for quick monitoring, morning headlines, and alert-style checks. This is the preferred OpenClaw path for “anything new?” questions.
 
 ```bash
+news-intel morning-scan
 news-intel scan --topic "europe_ru_war_preparations" --since "2h"
 news-intel scan --topic "china_taiwan_risk" --since "6h"
 news-intel scan --topic "migration_policy_europe" --since "24h"
 news-intel scan --query "NATO troops eastern Europe" --since "24h"
-news-intel scan --all-watchlists --since "24h" --min-confidence medium --group-by-primary
+news-intel scan --all-watchlists --since "24h" --min-confidence medium --group-by-primary --fresh
 news-intel scan --topic "europe_ru_war_preparations" --since "24h" --min-confidence medium
 news-intel scan --topic "europe_ru_war_preparations" --since "24h" --only-new
 ```
@@ -177,6 +178,8 @@ Source policy:
 - Restricted/paywalled sources are not scraped.
 
 Scan behavior:
+- `morning-scan` runs fresh RSS ingest with `--max-items 200`, then runs the all-watchlists signal scan.
+- Use `news-intel scan --all-watchlists --since "24h" --min-confidence medium --group-by-primary --fresh` when you want the explicit equivalent.
 - Morning all-watchlist scans use `--group-by-primary` to avoid duplicating the same headline across topics without suppressing valid signals.
 - Morning all-watchlist scans group repeated headlines into event clusters and show primary, secondary, and spillover topic routing.
 - Market-only Iran headlines route to `global_trade_and_country_flows` with `iran_war_risk` as secondary when relevant; non-EU energy headlines are rejected from `eu_energy_security`.

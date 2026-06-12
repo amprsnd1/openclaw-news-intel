@@ -1313,6 +1313,7 @@ def render_scan_markdown(result: Dict[str, Any]) -> str:
         f"New items scanned: {result.get('new_items_scanned', 0)}",
         f"Signals found: {len(signals)}",
     ]
+    _append_fresh_ingest(lines, result)
     if result.get("source_groups_used"):
         lines.extend(["", "## Source Groups Used"])
         for group in result.get("source_groups_used") or []:
@@ -1418,6 +1419,25 @@ def _headline_link(row: Dict[str, Any]) -> str:
     return f"{title} (URL: unavailable)"
 
 
+def _append_fresh_ingest(lines: List[str], result: Dict[str, Any]) -> None:
+    fresh = result.get("fresh_ingest")
+    if not fresh:
+        return
+    warnings = fresh.get("warnings") or []
+    lines.extend(
+        [
+            "",
+            "## Fresh Ingest",
+            "- Fresh ingest: ran",
+            f"- RSS items inserted: {fresh.get('inserted', 0)}",
+            f"- RSS items skipped: {fresh.get('skipped', 0)}",
+            f"- RSS warnings: {len(warnings)}",
+        ]
+    )
+    for warning in warnings[:5]:
+        lines.append(f"- RSS warning detail: {warning}")
+
+
 def _cluster_title(row: Dict[str, Any]) -> str:
     fields = _article_fields(row)
     primary = row.get("primary_topic")
@@ -1485,6 +1505,7 @@ def render_all_watchlists_scan_markdown(result: Dict[str, Any]) -> str:
         f"Signals found: {len(signals)}",
         f"Clusters found: {len(clusters)}",
     ]
+    _append_fresh_ingest(lines, result)
     if clusters:
         lines.extend(["", "## Top Alerts"])
         for cluster in clusters[:5]:

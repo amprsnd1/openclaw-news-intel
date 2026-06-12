@@ -1,6 +1,6 @@
 ## 0) Morning all-watchlists scan
 
-Run `news-intel scan --all-watchlists --since "24h" --min-confidence medium --group-by-primary`. Group by primary topic, cluster repeated headlines, avoid duplicate headline rows, include primary/secondary/spillover routing, include markdown links, include source diversity notes for high alerts, and return concise markdown.
+Run `news-intel morning-scan`. This refreshes RSS first, then scans all watchlists for the last 24h. Group by primary topic, cluster repeated headlines, avoid duplicate headline rows, include primary/secondary/spillover routing, include markdown links, include source diversity notes for high alerts, and return concise markdown.
 
 # OpenClaw Prompt Examples
 

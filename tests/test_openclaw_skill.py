@@ -5,7 +5,9 @@ def test_openclaw_skill_includes_collect_and_enrich_commands() -> None:
     text = Path("openclaw-skills/news-intelligence/SKILL.md").read_text(encoding="utf-8")
     assert "news-intel source-groups" in text
     assert "news-intel source-health" in text
+    assert "news-intel morning-scan" in text
     assert 'news-intel scan --all-watchlists --since "<window>" --min-confidence medium --group-by-primary' in text
+    assert 'news-intel scan --all-watchlists --since "<window>" --min-confidence medium --group-by-primary --fresh' in text
     assert 'news-intel scan --all-watchlists --since "<window>" --min-confidence medium --primary-only' in text
     assert 'news-intel scan --topic "<topic>" --since "<window>"' in text
     assert 'news-intel scan --topic "<topic>" --since "<window>" --source rss,google_news_rss' in text
@@ -31,10 +33,14 @@ def test_openclaw_skill_includes_collect_and_enrich_commands() -> None:
     assert "Always distinguish high, medium, low confidence direct matches, near misses, and gaps." in text
     assert "If Fundus returns enriched=0, report the eligibility breakdown and skipped examples." in text
     assert "For quick news monitoring, prefer `scan`." in text
+    assert "Always refresh RSS before a morning scan." in text
+    assert 'For morning scans across all topics, prefer `news-intel morning-scan`.' in text
     assert 'let topic defaults choose source groups' in text
     assert "Use explicit `--source` only when the user asks for a specific source group." in text
     assert "For morning scans, prefer group-by-primary output." in text
     assert "Use `--group-by-primary` for recall-safe morning scans" in text
+    assert '"morning scan" -> `news-intel morning-scan`' in text
+    assert '"scan the last 24h" -> `news-intel morning-scan`' in text
     assert "Do not duplicate the same article across multiple watchlists." in text
     assert "High-alert claims should mention source diversity." in text
     assert "Always include markdown links with real URLs when available." in text

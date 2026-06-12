@@ -92,38 +92,38 @@ def _ingest_source(
     return [], f"Unknown adapter '{adapter}' for source {source_cfg.get('name', 'unknown')}"
 
 
-def cmd_ingest(args: argparse.Namespace) -> int:
-    storage, all_sources, watchlists = _load_runtime()
-    adapter_status = _adapter_statuses()
-    topic = getattr(args, "topic", None)
+def _run_ingest(
+    storage: Storage,
+    all_sources: List[Dict[str, Any]],
+    watchlists: List[Dict[str, Any]],
+    mode: str,
+    max_items: int,
+    topic: str | None = None,
+) -> Dict[str, Any]:
     topic_watchlist = _find_watchlist(topic, watchlists)
-
-    if args.mode == "fundus" and not adapter_status["fundus"]["available"]:
-        print(f"ERROR: {adapter_status['fundus']['message']}")
-        storage.close()
-        return 2
-
-    selected_sources = _select_sources_by_mode(all_sources, args.mode)
-    if not selected_sources:
-        print(f"No enabled sources configured for mode '{args.mode}'.")
-        storage.close()
-        return 0
-
+    selected_sources = _select_sources_by_mode(all_sources, mode)
     inserted = 0
     skipped = 0
     matched = 0
     warnings: List[str] = []
+
     if topic and topic_watchlist is None:
         warnings.append(f"Watchlist topic '{topic}' not found. Proceeding without targeted topic ingestion.")
+    if not selected_sources:
+        warnings.append(f"No enabled sources configured for mode '{mode}'.")
+        return {"mode": mode, "inserted": 0, "skipped": 0, "matched": 0, "warnings": warnings}
 
-    try:
-        for source_cfg in selected_sources:
-            adapter = source_cfg.get("adapter", "rss")
-            wl = topic_watchlist if adapter == "gdelt" else None
-            raw_items, warning = _ingest_source(source_cfg, max_items=args.max_items, topic_watchlist=wl)
-            if warning:
-                warnings.append(warning)
+    for source_cfg in selected_sources:
+        adapter = source_cfg.get("adapter", "rss")
+        wl = topic_watchlist if adapter == "gdelt" else None
+        try:
+            raw_items, warning = _ingest_source(source_cfg, max_items=max_items, topic_watchlist=wl)
+        except Exception as exc:
+            raw_items, warning = [], f"{adapter.upper()} ingest failed for {source_cfg.get('name', 'unknown')}: {exc}"
+        if warning:
+            warnings.append(warning)
 
+        try:
             normalized = [normalize_article(item, source_cfg) for item in raw_items]
             normalized = dedupe_batch(normalized)
 
@@ -138,16 +138,34 @@ def cmd_ingest(args: argparse.Namespace) -> int:
                 for match in wl_matches:
                     storage.insert_match(article["id"], match)
                     matched += 1
+        except Exception as exc:
+            warnings.append(f"{adapter.upper()} ingest normalization/storage warning for {source_cfg.get('name', 'unknown')}: {exc}")
+
+    return {"mode": mode, "inserted": inserted, "skipped": skipped, "matched": matched, "warnings": warnings}
+
+
+def cmd_ingest(args: argparse.Namespace) -> int:
+    storage, all_sources, watchlists = _load_runtime()
+    adapter_status = _adapter_statuses()
+    topic = getattr(args, "topic", None)
+
+    if args.mode == "fundus" and not adapter_status["fundus"]["available"]:
+        print(f"ERROR: {adapter_status['fundus']['message']}")
+        storage.close()
+        return 2
+
+    try:
+        result = _run_ingest(storage, all_sources, watchlists, args.mode, args.max_items, topic=topic)
     finally:
         storage.close()
 
-    for warning in warnings:
+    for warning in result["warnings"]:
         print(f"WARNING: {warning}")
 
     print(
         "Ingest complete: "
-        f"mode={args.mode} inserted={inserted} skipped={skipped} "
-        f"watchlist_matches={matched} warnings={len(warnings)}"
+        f"mode={args.mode} inserted={result['inserted']} skipped={result['skipped']} "
+        f"watchlist_matches={result['matched']} warnings={len(result['warnings'])}"
     )
     return 0
 
@@ -184,6 +202,15 @@ def cmd_scan(args: argparse.Namespace) -> int:
     source_quality = load_source_quality()
     gdelt_config = load_gdelt_config()
     google_news_config = load_google_news_config()
+    fresh_ingest = None
+    if getattr(args, "fresh", False):
+        fresh_ingest = _run_ingest(
+            storage,
+            sources,
+            watchlists,
+            "rss",
+            int(getattr(args, "fresh_max_items", 200) or 200),
+        )
 
     if getattr(args, "all_watchlists", False):
         combined_signals: List[Dict[str, Any]] = []
@@ -299,6 +326,7 @@ def cmd_scan(args: argparse.Namespace) -> int:
             "sources": source_refs,
             "source_status": statuses,
             "warnings": sorted(set(warnings)),
+            "fresh_ingest": fresh_ingest,
             "scanned_counts": scanned_counts,
             "new_items_scanned": new_items_scanned,
             "signals": final_signals,
@@ -348,6 +376,7 @@ def cmd_scan(args: argparse.Namespace) -> int:
             show_rejected=getattr(args, "show_rejected", False),
             primary_only=getattr(args, "primary_only", False),
         )
+        result["fresh_ingest"] = fresh_ingest
     except ValueError as exc:
         storage.close()
         print(f"ERROR: {exc}")
@@ -360,6 +389,29 @@ def cmd_scan(args: argparse.Namespace) -> int:
 
     print(render_scan_markdown(result))
     return 0
+
+
+def cmd_morning_scan(args: argparse.Namespace) -> int:
+    scan_args = argparse.Namespace(
+        all_watchlists=True,
+        topic=None,
+        query=None,
+        since=args.since,
+        max_items=50,
+        source=args.source,
+        min_confidence=args.min_confidence,
+        only_new=True,
+        show_seen=args.show_seen,
+        show_rejected=args.show_rejected,
+        primary_only=False,
+        group_by_primary=True,
+        format="markdown",
+        max_queries=1,
+        use_cache_first=False,
+        fresh=True,
+        fresh_max_items=args.max_items,
+    )
+    return cmd_scan(scan_args)
 
 
 def _watchlist_terms(topic: str, watchlists: List[Dict[str, Any]]) -> List[str]:
@@ -915,7 +967,18 @@ def build_parser() -> argparse.ArgumentParser:
     p_scan.add_argument("--format", choices=("markdown",), default="markdown", help="Output format")
     p_scan.add_argument("--max-queries", type=int, default=1, help="Maximum GDELT/Google query plans to use")
     p_scan.add_argument("--use-cache-first", action="store_true", help="Prefer fresh cached GDELT results")
+    p_scan.add_argument("--fresh", action="store_true", help="Run fresh RSS ingest before scanning")
+    p_scan.add_argument("--fresh-max-items", type=int, default=200, help="RSS max items per source for --fresh")
     p_scan.set_defaults(func=cmd_scan)
+
+    p_morning = sub.add_parser("morning-scan", help="Run fresh RSS ingest then all-watchlists morning signal scan")
+    p_morning.add_argument("--since", type=str, default="24h", help="Lookback window such as 24h or 7d")
+    p_morning.add_argument("--min-confidence", choices=("low", "medium", "high"), default="medium", help="Minimum signal tier")
+    p_morning.add_argument("--max-items", type=int, default=200, help="Fresh RSS ingest max items per source")
+    p_morning.add_argument("--show-rejected", action="store_true", help="Show rejected or demoted candidate headlines with reasons")
+    p_morning.add_argument("--show-seen", action="store_true", help="Show items already returned by prior scans")
+    p_morning.add_argument("--source", type=str, default=None, help="Optional comma-separated sources or groups")
+    p_morning.set_defaults(func=cmd_morning_scan)
 
     p_digest = sub.add_parser("digest", help="Generate markdown digest for a topic")
     p_digest.add_argument("--topic", required=True, type=str, help="Topic name or query")

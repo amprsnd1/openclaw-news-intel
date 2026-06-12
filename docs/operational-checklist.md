@@ -20,7 +20,8 @@
 
 ## Fast Signal Runs
 
-- `news-intel scan --all-watchlists --since "24h" --min-confidence medium --group-by-primary`
+- `news-intel morning-scan`
+- Explicit equivalent: `news-intel scan --all-watchlists --since "24h" --min-confidence medium --group-by-primary --fresh`
 - Confirm all-watchlists output includes clusters, markdown links, primary/secondary/spillover routing, source diversity, and watchlist summary.
 - Use `--show-rejected` for noisy topics before changing watchlist terms.
 

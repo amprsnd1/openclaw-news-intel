@@ -21,7 +21,9 @@ news-intel source-groups
 news-intel source-health
 news-intel ingest --mode rss
 news-intel ingest --mode all
+news-intel morning-scan
 news-intel scan --all-watchlists --since "<window>" --min-confidence medium --group-by-primary
+news-intel scan --all-watchlists --since "<window>" --min-confidence medium --group-by-primary --fresh
 news-intel scan --all-watchlists --since "<window>" --min-confidence medium --primary-only
 news-intel scan --topic "<topic>" --since "<window>"
 news-intel scan --topic "<topic>" --since "<window>" --source rss,google_news_rss
@@ -48,7 +50,9 @@ news-intel digest --topic "<topic>" --days <number> --include-metadata-only
 - GDELT is the primary strategic topic discovery source.
 - RSS is fallback and remains the core safe ingestion path.
 - For quick news monitoring, prefer `scan`.
-- For morning scans across all topics, prefer `news-intel scan --all-watchlists --since "24h" --min-confidence medium --group-by-primary`.
+- Always refresh RSS before a morning scan.
+- For morning scans across all topics, prefer `news-intel morning-scan`.
+- If using `scan` directly for morning coverage, use `news-intel scan --all-watchlists --since "24h" --min-confidence medium --group-by-primary --fresh`.
 - For single-topic quick monitoring, use `news-intel scan --topic "<topic>" --since "24h" --min-confidence medium` and let topic defaults choose source groups.
 - Use explicit `--source` only when the user asks for a specific source group.
 - For strategic defense/security topics, topic defaults include `defense_specialist`, `european_local`, `google_news_rss`, `official_defense`, and `official_eu`.
@@ -113,7 +117,11 @@ news-intel stats
 ```
 For morning watchlist coverage, run:
 ```bash
-news-intel scan --all-watchlists --since "24h" --min-confidence medium --group-by-primary
+news-intel morning-scan
+```
+Equivalent explicit command:
+```bash
+news-intel scan --all-watchlists --since "24h" --min-confidence medium --group-by-primary --fresh
 ```
 For quick single-topic monitoring, run:
 ```bash
@@ -133,7 +141,10 @@ news-intel scan --topic "ukraine_financing" --since "24h" --min-confidence mediu
 ```
 Natural language mappings:
 - "check the latest signals" -> `news-intel scan --topic "<topic>" --since "2h" --only-new --min-confidence medium`
-- "morning headlines" -> `news-intel scan --all-watchlists --since "24h" --min-confidence medium --group-by-primary`
+- "morning scan" -> `news-intel morning-scan`
+- "morning headlines" -> `news-intel morning-scan`
+- "watchlist scan" -> `news-intel morning-scan`
+- "scan the last 24h" -> `news-intel morning-scan`
 - "scan the last 2 hours" -> `news-intel scan --topic "<topic>" --since "2h" --only-new --min-confidence medium`
 - "morning scan for Europe-Russia war prep" -> `news-intel scan --topic "europe_ru_war_preparations" --since "24h" --min-confidence medium`
 - "market signal scan" -> `news-intel scan --topic "global_trade_and_country_flows" --since "24h" --min-confidence medium`

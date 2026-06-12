@@ -101,7 +101,8 @@ Example commands:
 ## Recommended Fast Signal Workflow
 
 - Run `news-intel scan --topic "<topic>" --since "2h" --only-new --min-confidence medium` for alert-style monitoring.
-- Run `news-intel scan --topic "<topic>" --since "24h"` for morning headline checks.
+- Run `news-intel morning-scan` for morning headline checks.
+- Explicit equivalent: `news-intel scan --all-watchlists --since "24h" --min-confidence medium --group-by-primary --fresh`.
 - Run `news-intel scan --query "<query>" --since "24h"` for free-form monitoring.
 - If RSS coverage looks thin, run `news-intel scan --topic "<topic>" --since "6h" --source rss,google_news_rss`.
 - For defense/security topics, run `news-intel scan --topic "europe_ru_war_preparations" --since "24h" --min-confidence medium`.
@@ -110,7 +111,10 @@ Example commands:
 
 Natural-language mapping examples:
 - "check the latest signals" -> `news-intel scan --topic "<topic>" --since "2h" --only-new --min-confidence medium`
-- "morning headlines" -> `news-intel scan --topic "<topic>" --since "24h" --only-new --min-confidence medium`
+- "morning scan" -> `news-intel morning-scan`
+- "morning headlines" -> `news-intel morning-scan`
+- "watchlist scan" -> `news-intel morning-scan`
+- "scan the last 24h" -> `news-intel morning-scan`
 - "scan the last 2 hours" -> `news-intel scan --topic "<topic>" --since "2h" --only-new --min-confidence medium`
 - "anything new on Europe-Russia war prep?" -> `news-intel scan --topic "europe_ru_war_preparations" --since "2h" --only-new --min-confidence medium`
 
@@ -132,4 +136,4 @@ Natural-language mapping examples:
 
 ## Morning Scan Precision
 
-Use `news-intel scan --all-watchlists --since "24h" --min-confidence medium --group-by-primary` for broad morning monitoring. The scan groups repeated headlines into clusters, shows primary/secondary/spillover routing, and keeps each headline under one primary topic. Use `--show-rejected` on a single topic when investigating why a headline was excluded or demoted. High-alert summaries should mention source diversity. Market-only Iran headlines should route to trade/market with Iran as secondary; non-EU energy, NATO-Europe-as-China/Taiwan, and generic defense-tech war-prep false positives should be rejected or demoted.
+Use `news-intel morning-scan` for broad morning monitoring. It runs fresh RSS ingest first, then runs `news-intel scan --all-watchlists --since "24h" --min-confidence medium --group-by-primary`. The explicit equivalent is `news-intel scan --all-watchlists --since "24h" --min-confidence medium --group-by-primary --fresh`. The scan groups repeated headlines into clusters, shows primary/secondary/spillover routing, and keeps each headline under one primary topic. Use `--show-rejected` on a single topic when investigating why a headline was excluded or demoted. High-alert summaries should mention source diversity. Market-only Iran headlines should route to trade/market with Iran as secondary; non-EU energy, NATO-Europe-as-China/Taiwan, and generic defense-tech war-prep false positives should be rejected or demoted.
