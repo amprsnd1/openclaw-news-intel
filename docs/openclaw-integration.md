@@ -17,7 +17,7 @@ Canonical project path: `/path/to/news-intel`.
 - `news-intel source-health`
 - `news-intel ingest --mode rss`
 - `news-intel ingest --mode all`
-- `news-intel scan --all-watchlists --since "<window>" --min-confidence medium --primary-only`
+- `news-intel scan --all-watchlists --since "<window>" --min-confidence medium --group-by-primary`
 - `news-intel scan --topic "<topic>" --since "<window>"`
 - `news-intel scan --topic "<topic>" --since "<window>" --source rss,google_news_rss`
 - `news-intel scan --topic "<topic>" --since "<window>" --source official_defense,official_eu,defense_specialist,european_local,google_news_rss --min-confidence medium`
@@ -132,4 +132,4 @@ Natural-language mapping examples:
 
 ## Morning Scan Precision
 
-Use `news-intel scan --all-watchlists --since "24h" --min-confidence medium --primary-only` for broad morning monitoring. Use `--show-rejected` on a single topic when investigating why a headline was excluded or demoted. High-alert summaries should mention source diversity.
+Use `news-intel scan --all-watchlists --since "24h" --min-confidence medium --group-by-primary` for broad morning monitoring. The scan groups repeated headlines into clusters, shows primary/secondary/spillover routing, and keeps each headline under one primary topic. Use `--show-rejected` on a single topic when investigating why a headline was excluded or demoted. High-alert summaries should mention source diversity. Market-only Iran headlines should route to trade/market with Iran as secondary; non-EU energy, NATO-Europe-as-China/Taiwan, and generic defense-tech war-prep false positives should be rejected or demoted.

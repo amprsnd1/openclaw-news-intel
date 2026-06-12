@@ -22,7 +22,7 @@ from .ingest.gdelt import fetch_gdelt_metadata, gdelt_status
 from .ingest.rss import fetch_rss
 from .normalize import normalize_article, utc_now_iso
 from .relevance import classify_watchlist_article
-from .scanner import render_all_watchlists_scan_markdown, render_scan_markdown, run_scan
+from .scanner import render_all_watchlists_scan_markdown, render_scan_markdown, run_scan, source_diversity_note
 from .storage import Storage
 
 SUPPORTED_MODES = ("rss", "fundus", "gdelt", "all")
@@ -188,12 +188,16 @@ def cmd_scan(args: argparse.Namespace) -> int:
     if getattr(args, "all_watchlists", False):
         combined_signals: List[Dict[str, Any]] = []
         combined_rejected: List[Dict[str, Any]] = []
-        summary: List[Dict[str, Any]] = []
+        rejected_by_topic: Dict[str, int] = {}
         statuses: Dict[str, str] = {"rss": "skipped", "google_news_rss": "skipped", "gdelt": "skipped", "fundus": "not used for scan"}
         warnings: List[str] = []
         source_refs: List[str] = []
         scanned_counts = {"rss": 0, "google_news_rss": 0, "gdelt": 0}
         new_items_scanned = 0
+        candidate_matches_before_routing = 0
+        suppressed_duplicates = 0
+        rejected_by_hard_gates = 0
+        reject_reason_counts: Dict[str, int] = {}
         diversity_notes: List[str] = []
         seen_ids: set[str] = set()
         try:
@@ -217,33 +221,27 @@ def cmd_scan(args: argparse.Namespace) -> int:
                     source_quality=source_quality,
                     all_watchlists=watchlists,
                     show_rejected=getattr(args, "show_rejected", False),
-                    primary_only=getattr(args, "primary_only", False),
+                    primary_only=False,
+                    group_by_primary=True,
                 )
                 signals = []
                 for row in result.get("signals") or []:
                     rid = row.get("id") or row.get("url")
-                    if getattr(args, "primary_only", False) and rid in seen_ids:
+                    candidate_matches_before_routing += 1
+                    if rid in seen_ids:
+                        suppressed_duplicates += 1
                         continue
                     if rid:
                         seen_ids.add(rid)
                     signals.append(row)
                 combined_signals.extend(signals)
                 combined_rejected.extend(result.get("rejected") or [])
-                high = sum(1 for row in signals if row.get("signal_class") == "high_signal")
-                medium = sum(1 for row in signals if row.get("signal_class") == "medium_signal")
-                low = sum(1 for row in signals if row.get("signal_class") == "low_signal")
+                rejected_by_hard_gates += int(result.get("rejected_count") or 0)
+                for reason, count in (result.get("reject_reason_counts") or {}).items():
+                    reject_reason_counts[reason] = reject_reason_counts.get(reason, 0) + int(count)
                 rejected = result.get("rejected_count", len(result.get("rejected") or []))
-                status = "HIGH ALERT" if high >= 3 else "Active" if high or medium else "Quiet" if low else "No direct signals"
-                summary.append(
-                    {
-                        "watchlist": watchlist.get("name"),
-                        "high": high,
-                        "medium": medium,
-                        "low": low,
-                        "rejected": rejected,
-                        "status": status,
-                    }
-                )
+                topic_name = str(watchlist.get("name") or "")
+                rejected_by_topic[topic_name] = rejected_by_topic.get(topic_name, 0) + int(rejected)
                 for key, value in (result.get("source_status") or {}).items():
                     if value != "skipped":
                         statuses[key] = value
@@ -254,8 +252,6 @@ def cmd_scan(args: argparse.Namespace) -> int:
                 for ref in result.get("source_groups_used") or []:
                     if ref not in source_refs:
                         source_refs.append(ref)
-                if result.get("source_diversity_note"):
-                    diversity_notes.append(f"{watchlist.get('name')}: {result['source_diversity_note']}")
         except ValueError as exc:
             storage.close()
             print(f"ERROR: {exc}")
@@ -274,6 +270,29 @@ def cmd_scan(args: argparse.Namespace) -> int:
             ),
             reverse=True,
         )
+        final_signals = combined_signals[: args.max_items]
+        summary: List[Dict[str, Any]] = []
+        for watchlist in watchlists:
+            name = str(watchlist.get("name") or "")
+            topic_rows = [row for row in final_signals if row.get("primary_topic") == name]
+            high = sum(1 for row in topic_rows if row.get("signal_class") == "high_signal")
+            medium = sum(1 for row in topic_rows if row.get("signal_class") == "medium_signal")
+            low = sum(1 for row in topic_rows if row.get("signal_class") == "low_signal")
+            rejected = rejected_by_topic.get(name, 0)
+            status = "HIGH ALERT" if high >= 3 else "Active" if high or medium else "Quiet" if low else "No direct signals"
+            note = source_diversity_note(name, [row for row in topic_rows if row.get("signal_class") == "high_signal"])
+            if note:
+                diversity_notes.append(f"{name}: {note}")
+            summary.append(
+                {
+                    "watchlist": name,
+                    "high": high,
+                    "medium": medium,
+                    "low": low,
+                    "rejected": rejected,
+                    "status": status,
+                }
+            )
         result = {
             "topic": "all-watchlists",
             "since": args.since,
@@ -282,10 +301,18 @@ def cmd_scan(args: argparse.Namespace) -> int:
             "warnings": sorted(set(warnings)),
             "scanned_counts": scanned_counts,
             "new_items_scanned": new_items_scanned,
-            "signals": combined_signals[: args.max_items],
+            "signals": final_signals,
             "rejected": combined_rejected[: args.max_items] if getattr(args, "show_rejected", False) else [],
             "watchlist_summary": summary,
             "source_diversity_notes": diversity_notes,
+            "routing_diagnostics": {
+                "total_scanned": new_items_scanned,
+                "candidate_matches_before_routing": candidate_matches_before_routing,
+                "shown_signals_after_routing": len(final_signals),
+                "suppressed_duplicates": suppressed_duplicates,
+                "rejected_by_hard_gates": rejected_by_hard_gates,
+                "top_reject_reasons": sorted(reject_reason_counts.items(), key=lambda item: item[1], reverse=True)[:5],
+            },
         }
         print(render_all_watchlists_scan_markdown(result))
         return 0
@@ -884,6 +911,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_scan.add_argument("--show-seen", action="store_true", help="Show items already returned by prior scans")
     p_scan.add_argument("--show-rejected", action="store_true", help="Show rejected or demoted candidate headlines with reasons")
     p_scan.add_argument("--primary-only", action="store_true", help="Show each article only under its primary watchlist topic")
+    p_scan.add_argument("--group-by-primary", action="store_true", help="For all-watchlists scans, keep signals and group each item once under its best primary topic")
     p_scan.add_argument("--format", choices=("markdown",), default="markdown", help="Output format")
     p_scan.add_argument("--max-queries", type=int, default=1, help="Maximum GDELT/Google query plans to use")
     p_scan.add_argument("--use-cache-first", action="store_true", help="Prefer fresh cached GDELT results")

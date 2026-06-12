@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Iterable, List, Tuple
 from urllib.parse import quote_plus
@@ -49,6 +50,31 @@ SCAN_WEAK_CORE_TERMS = {
     }
 }
 
+EUROPE_WAR_PREP_ANCHOR_TERMS = [
+    "Russia",
+    "Russian",
+    "Russia threat",
+    "NATO",
+    "Eastern Europe",
+    "Poland",
+    "Baltics",
+    "Ukraine war spillover",
+    "readiness",
+    "procurement",
+    "defense budget",
+    "defence budget",
+    "defense spending",
+    "defence spending",
+    "troop deployment",
+    "civil defense",
+    "civil defence",
+    "mobilization",
+    "critical infrastructure",
+    "sabotage",
+    "cyberattack",
+    "ammunition",
+]
+
 HARD_GATES = {
     "ukraine_financing": {
         "context": ["Ukraine", "Ukrainian", "Kyiv", "Zelenskyy", "Ukraine Facility"],
@@ -96,6 +122,8 @@ HARD_GATES = {
             "Eastern Europe",
             "European Commission",
             "European Council",
+            "Russia threat",
+            "Ukraine war spillover",
         ],
         "required": [
             "defense budget",
@@ -141,6 +169,8 @@ HARD_GATES = {
             "US",
             "EU",
             "Europe",
+            "eurozone",
+            "ECB",
             "India",
             "Japan",
             "South Korea",
@@ -175,11 +205,19 @@ HARD_GATES = {
             "Suez Canal",
             "Panama Canal",
             "Strait of Hormuz",
+            "Hormuz",
             "oil flows",
+            "oil",
+            "oil prices",
             "LNG",
             "grain exports",
             "rare earths",
             "semiconductors",
+            "inflation",
+            "rates",
+            "interest rates",
+            "bond yields",
+            "commodities",
             "customs",
             "WTO",
             "anti-dumping",
@@ -188,6 +226,117 @@ HARD_GATES = {
         ],
         "missing_context": "no country/global trade context",
         "missing_required": "no trade, shipping, sanctions, commodity-flow, or supply-chain term",
+    },
+    "eu_energy_security": {
+        "context": [
+            "EU",
+            "Europe",
+            "European",
+            "eurozone",
+            "Germany",
+            "France",
+            "Poland",
+            "Baltics",
+            "Netherlands",
+            "Italy",
+            "Spain",
+            "LNG Europe",
+            "European gas",
+            "EU energy",
+        ],
+        "required": [
+            "gas",
+            "LNG",
+            "oil",
+            "electricity",
+            "power grid",
+            "energy security",
+            "gas storage",
+            "pipeline",
+            "sanctions",
+            "energy prices",
+            "renewables",
+            "nuclear",
+            "blackout",
+            "supply risk",
+            "Russian gas",
+        ],
+        "missing_context": "no EU/Europe/member-state energy-security context",
+        "missing_required": "no energy, security, or supply term",
+    },
+    "china_taiwan_risk": {
+        "context": [
+            "China",
+            "Chinese",
+            "Taiwan",
+            "Taiwanese",
+            "Taipei",
+            "Beijing",
+            "PLA",
+            "Indo-Pacific",
+            "South China Sea",
+            "East China Sea",
+            "Pacific",
+            "TSMC",
+            "semiconductor supply chain",
+        ],
+        "required": [
+            "military",
+            "blockade",
+            "sanctions",
+            "export controls",
+            "chips",
+            "chip",
+            "Taiwan Strait",
+            "PLA",
+            "naval",
+            "air drills",
+            "missile",
+            "warships",
+            "fighter jets",
+            "semiconductor",
+            "TSMC",
+        ],
+        "missing_context": "no China/Taiwan/PLA/Pacific/semiconductor context",
+        "missing_required": "no China-Taiwan military, blockade, sanctions, export-control, chip, or Strait term",
+    },
+    "iran_war_risk": {
+        "context": [
+            "Iran",
+            "Iranian",
+            "Tehran",
+            "IRGC",
+            "Israel",
+            "Israeli",
+            "US forces",
+            "United States",
+            "US",
+            "Gulf",
+            "Hormuz",
+            "Strait of Hormuz",
+            "Hezbollah",
+            "Houthis",
+            "Houthi",
+            "nuclear",
+        ],
+        "required": [
+            "strike",
+            "strikes",
+            "missile",
+            "drone",
+            "retaliation",
+            "war",
+            "escalation",
+            "base",
+            "bases",
+            "tanker",
+            "nuclear",
+            "proxy",
+            "air defense",
+            "air defence",
+        ],
+        "missing_context": "no Iran/Israel/US forces/Gulf/proxy/nuclear context",
+        "missing_required": "no military escalation, strike, missile, drone, base, tanker, proxy, or nuclear term",
     },
     "migration_policy_europe": {
         "context": [
@@ -238,6 +387,59 @@ HARD_GATES = {
 }
 
 HIGH_RISK_TOPICS = {"iran_war_risk", "china_taiwan_risk", "europe_ru_war_preparations"}
+
+MARKET_OWNERSHIP_TERMS = [
+    "inflation",
+    "rates",
+    "interest rates",
+    "bond yields",
+    "commodities",
+    "oil",
+    "oil prices",
+    "oil flows",
+    "shipping",
+    "Hormuz",
+    "Strait of Hormuz",
+    "freight",
+    "container rates",
+    "supply chain",
+    "sanctions",
+    "secondary sanctions",
+]
+
+MARKET_PRIMARY_TERMS = [
+    "inflation",
+    "rates",
+    "interest rates",
+    "bond yields",
+    "commodities",
+    "oil prices",
+    "oil flows",
+]
+
+IRAN_ESCALATION_TERMS = [
+    "strike",
+    "strikes",
+    "missile",
+    "drone",
+    "retaliation",
+    "base",
+    "bases",
+    "proxy",
+    "air defense",
+    "air defence",
+    "nuclear",
+    "tanker",
+]
+
+SPILLOVER_LABEL_TERMS = {
+    "inflation": ["inflation", "rates", "interest rates", "bond yields"],
+    "oil": ["oil", "oil prices", "oil flows", "Brent", "WTI"],
+    "shipping": ["shipping", "Hormuz", "Strait of Hormuz", "Red Sea", "Suez", "freight", "container rates"],
+    "energy": ["gas", "LNG", "electricity", "power grid", "energy prices", "pipeline"],
+    "security": ["strike", "missile", "drone", "retaliation", "base", "sabotage", "cyberattack"],
+    "semiconductors": ["semiconductor", "semiconductors", "chips", "TSMC"],
+}
 
 
 def parse_since_window(value: str | None) -> tuple[datetime, str, int]:
@@ -400,7 +602,8 @@ def classify_signal(article: Dict[str, Any], watchlist: Dict[str, Any] | None = 
         }
 
     watchlist_name = _watchlist_name(watchlist)
-    gate = _hard_gate_result(watchlist_name, fields)
+    strict_fields = [title, summary]
+    gate = _hard_gate_result(watchlist_name, strict_fields)
     if gate and not gate["passed"]:
         reason = "; ".join(gate["missing_required_terms"])
         if matched_all or gate["matched_gate_context_terms"] or gate["matched_gate_required_terms"]:
@@ -418,6 +621,24 @@ def classify_signal(article: Dict[str, Any], watchlist: Dict[str, Any] | None = 
             }
         )
         return payload
+    if gate and gate["passed"]:
+        matched_context = sorted(set(matched_context + gate["matched_gate_context_terms"]))
+        matched_core = sorted(set(matched_core + gate["matched_gate_required_terms"]))
+        matched_all = sorted(set(matched_all + gate["matched_gate_context_terms"] + gate["matched_gate_required_terms"]))
+
+    if watchlist_name == "europe_ru_war_preparations" and gate and gate["passed"]:
+        anchors = match_terms_in_fields(strict_fields, EUROPE_WAR_PREP_ANCHOR_TERMS)
+        if not anchors:
+            return {
+                "signal_class": "low_signal",
+                "matched_terms": matched_all,
+                "matched_context_terms": sorted(set(matched_context + gate["matched_gate_context_terms"])),
+                "matched_core_terms": sorted(set(matched_core + gate["matched_gate_required_terms"])),
+                "matched_event_triggers": sorted(set(matched_event)),
+                "matched_financial_terms": sorted(set(matched_financial)),
+                "missing_required_terms": ["no explicit Europe/Russia/NATO readiness, procurement, deployment, infrastructure, cyber, sabotage, or mobilization anchor"],
+                "why": "Generic defense or security item; demoted because it lacks an explicit Europe/Russia/NATO war-preparation anchor.",
+            }
 
     weak_core_only = bool(matched_core) and set(matched_core).issubset(SCAN_WEAK_CORE_TERMS.get(watchlist_name, set()))
 
@@ -462,9 +683,43 @@ def classify_signal(article: Dict[str, Any], watchlist: Dict[str, Any] | None = 
     }
 
 
-def _classification_score(classification: Dict[str, Any]) -> Tuple[int, int, int]:
+def _article_fields(article: Dict[str, Any]) -> List[str]:
+    return [str(article.get("title") or ""), str(article.get("summary") or ""), str(article.get("source") or "")]
+
+
+def _spillover_labels(article: Dict[str, Any]) -> List[str]:
+    fields = _article_fields(article)
+    labels: List[str] = []
+    for label, terms in SPILLOVER_LABEL_TERMS.items():
+        if match_terms_in_fields(fields, terms):
+            labels.append(label)
+    return labels
+
+
+def _classification_score(topic: str, classification: Dict[str, Any], article: Dict[str, Any]) -> Tuple[int, int, int, int]:
+    fields = _article_fields(article)
+    ownership_bonus = 0
+    has_market_primary = bool(match_terms_in_fields(fields, MARKET_PRIMARY_TERMS))
+    has_escalation = bool(match_terms_in_fields(fields, IRAN_ESCALATION_TERMS))
+    if topic == "global_trade_and_country_flows" and has_market_primary:
+        ownership_bonus += 2
+    elif topic == "global_trade_and_country_flows" and match_terms_in_fields(fields, MARKET_OWNERSHIP_TERMS) and not has_escalation:
+        ownership_bonus += 1
+    if topic == "iran_war_risk":
+        has_market = bool(match_terms_in_fields(fields, MARKET_OWNERSHIP_TERMS))
+        if has_escalation:
+            ownership_bonus += 2
+        if has_market_primary and not has_escalation:
+            ownership_bonus -= 2
+    if topic == "eu_energy_security" and match_terms_in_fields(fields, ["EU", "Europe", "European", "eurozone", "European gas", "EU energy"]):
+        ownership_bonus += 1
+    if topic == "china_taiwan_risk" and match_terms_in_fields(fields, ["China", "Taiwan", "PLA", "Pacific", "TSMC"]):
+        ownership_bonus += 1
+    if topic == "europe_ru_war_preparations" and match_terms_in_fields(fields, ["Russia threat", "NATO", "Eastern Europe", "readiness", "procurement"]):
+        ownership_bonus += 1
     return (
         SIGNAL_RANK.get(classification.get("signal_class"), 0),
+        ownership_bonus,
         len(classification.get("matched_terms") or []),
         SOURCE_QUALITY_RANK.get(str(classification.get("source_quality") or "medium").lower(), 2),
     )
@@ -474,8 +729,9 @@ def classify_across_watchlists(
     article: Dict[str, Any],
     watchlists: List[Dict[str, Any]] | None,
     current_watchlist: Dict[str, Any] | None = None,
+    demote_non_primary: bool = True,
 ) -> Dict[str, Any]:
-    topic_scores: List[Tuple[Tuple[int, int, int], str, Dict[str, Any]]] = []
+    topic_scores: List[Tuple[Tuple[int, int, int, int], str, Dict[str, Any]]] = []
     classifications: Dict[str, Dict[str, Any]] = {}
     for watchlist in watchlists or []:
         name = _watchlist_name(watchlist)
@@ -484,14 +740,14 @@ def classify_across_watchlists(
         classification = classify_signal(article, watchlist=watchlist)
         classification["source_quality"] = article.get("source_quality", "medium")
         classifications[name] = classification
-        score = _classification_score(classification)
+        score = _classification_score(name, classification, article)
         if score[0] > 0:
             topic_scores.append((score, name, classification))
 
     if not topic_scores:
         current_name = _watchlist_name(current_watchlist)
         current = classify_signal(article, watchlist=current_watchlist) if current_watchlist else {}
-        current.update({"primary_topic": current_name or None, "secondary_topics": []})
+        current.update({"primary_topic": current_name or None, "secondary_topics": [], "spillover_topics": _spillover_labels(article)})
         return current
 
     topic_scores.sort(key=lambda item: item[0], reverse=True)
@@ -500,9 +756,10 @@ def classify_across_watchlists(
     primary_classification = dict(primary_classification)
     primary_classification["primary_topic"] = primary_topic
     primary_classification["secondary_topics"] = secondary
+    primary_classification["spillover_topics"] = _spillover_labels(article)
 
     current_name = _watchlist_name(current_watchlist)
-    if current_name and current_name != primary_topic:
+    if demote_non_primary and current_name and current_name != primary_topic:
         current_classification = classifications.get(current_name)
         if current_classification:
             reason = current_classification.get("reject_reason") or f"Primary topic is {primary_topic}; {current_name} is only secondary for this headline."
@@ -518,6 +775,7 @@ def classify_across_watchlists(
                     "matched_financial_terms": current_classification.get("matched_financial_terms", []),
                     "primary_topic": primary_topic,
                     "secondary_topics": secondary,
+                    "spillover_topics": _spillover_labels(article),
                 }
             )
             return demoted
@@ -818,6 +1076,7 @@ def run_scan(
     all_watchlists: List[Dict[str, Any]] | None = None,
     show_rejected: bool = False,
     primary_only: bool = False,
+    group_by_primary: bool = False,
 ) -> Dict[str, Any]:
     since_dt, since_label, _ = parse_since_window(since)
     default_sources_used = False
@@ -950,20 +1209,29 @@ def run_scan(
     signals: List[Dict[str, Any]] = []
     rejected: List[Dict[str, Any]] = []
     rejected_total = 0
+    reject_reason_counts: Dict[str, int] = {}
     threshold = MIN_CONFIDENCE_RANK.get(min_confidence, 1)
     for candidate in candidates:
         if watchlist and all_watchlists:
-            signal = classify_across_watchlists(candidate, all_watchlists, current_watchlist=watchlist)
+            signal = classify_across_watchlists(
+                candidate,
+                all_watchlists,
+                current_watchlist=watchlist,
+                demote_non_primary=not group_by_primary,
+            )
         else:
             signal = classify_signal(candidate, watchlist=watchlist, query=query)
             if watchlist:
                 signal.setdefault("primary_topic", topic_name)
                 signal.setdefault("secondary_topics", [])
+                signal.setdefault("spillover_topics", _spillover_labels(candidate))
         candidate.update(signal)
         candidate["signal_rank"] = SIGNAL_RANK.get(candidate.get("signal_class"), 0)
         if candidate["signal_rank"] <= 0:
             if candidate.get("reject_reason") or show_rejected:
                 rejected_total += 1
+                reason = str(candidate.get("reject_reason") or candidate.get("why") or "Rejected")
+                reject_reason_counts[reason] = reject_reason_counts.get(reason, 0) + 1
             if show_rejected:
                 rejected.append(candidate)
             continue
@@ -973,14 +1241,17 @@ def run_scan(
             candidate["rejection_kind"] = "Demoted"
             candidate["reject_reason"] = f"Primary topic is {candidate.get('primary_topic')}; not shown under {topic_name} in primary-only mode."
             rejected_total += 1
+            reject_reason_counts[candidate["reject_reason"]] = reject_reason_counts.get(candidate["reject_reason"], 0) + 1
             if show_rejected:
                 rejected.append(candidate)
             continue
         if candidate["signal_rank"] < threshold:
             rejected_total += 1
+            reason = f"Below minimum confidence threshold: {candidate.get('signal_class')} < {min_confidence}."
+            reject_reason_counts[reason] = reject_reason_counts.get(reason, 0) + 1
             if show_rejected:
                 candidate["rejection_kind"] = "Demoted"
-                candidate["reject_reason"] = f"Below minimum confidence threshold: {candidate.get('signal_class')} < {min_confidence}."
+                candidate["reject_reason"] = reason
                 rejected.append(candidate)
             continue
         if only_new and not show_seen and candidate.get("id") in seen_ids:
@@ -1020,6 +1291,7 @@ def run_scan(
         "signals": selected,
         "rejected": rejected[:max_items],
         "rejected_count": rejected_total,
+        "reject_reason_counts": reject_reason_counts,
         "source_diversity_note": source_diversity_note(topic_name, selected_high),
         "seen_hidden": max(0, len(signals) - len(selected)),
     }
@@ -1066,7 +1338,7 @@ def render_scan_markdown(result: Dict[str, Any]) -> str:
             matched = ", ".join(row.get("matched_terms") or []) or "-"
             missing = ", ".join(row.get("missing_required_terms") or []) or "-"
             secondary = ", ".join(row.get("secondary_topics") or []) or "-"
-            lines.append(f"{idx}. [{row.get('title', 'Untitled')}]({row.get('url', '')})")
+            lines.append(f"{idx}. {_headline_link(row)}")
             lines.append(f"   Source: {row.get('source', '-')}")
             lines.append(f"   Time: {row.get('published_at', '-')}")
             lines.append(f"   Primary topic: {row.get('primary_topic') or result.get('topic') or 'free_form_query'}")
@@ -1087,7 +1359,7 @@ def render_scan_markdown(result: Dict[str, Any]) -> str:
         for row in rejected:
             matched = ", ".join(row.get("matched_terms") or []) or "-"
             missing = ", ".join(row.get("missing_required_terms") or []) or "-"
-            lines.append(f"- [{row.get('title', 'Untitled')}]({row.get('url', '')})")
+            lines.append(f"- {_headline_link(row)}")
             lines.append(f"  {row.get('rejection_kind', 'Rejected')} from: {result.get('topic') or row.get('primary_topic') or subject}")
             lines.append(f"  Reason: {row.get('reject_reason') or row.get('why') or '-'}")
             lines.append(f"  Matched terms: {matched}")
@@ -1138,16 +1410,106 @@ def render_scan_markdown(result: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def _headline_link(row: Dict[str, Any]) -> str:
+    title = str(row.get("title") or "Untitled")
+    url = str(row.get("url") or "").strip()
+    if url:
+        return f"[{title}]({url})"
+    return f"{title} (URL: unavailable)"
+
+
+def _cluster_title(row: Dict[str, Any]) -> str:
+    fields = _article_fields(row)
+    primary = row.get("primary_topic")
+    if primary == "iran_war_risk" and match_terms_in_fields(fields, ["Iran", "Tehran", "IRGC"]) and match_terms_in_fields(fields, IRAN_ESCALATION_TERMS):
+        return "US-Iran military escalation"
+    if match_terms_in_fields(fields, ["Iran", "Hormuz", "Strait of Hormuz"]) and match_terms_in_fields(fields, ["oil", "oil prices", "shipping", "inflation", "rates"]):
+        return "Iran oil / Hormuz market spillover"
+    if primary == "migration_policy_europe" and match_terms_in_fields(fields, ["migration", "asylum", "return hubs", "deportation", "border controls"]):
+        return "EU migration policy"
+    if primary == "europe_ru_war_preparations" and match_terms_in_fields(fields, ["procurement", "air defense", "ammunition", "defense budget", "troop deployment", "readiness"]):
+        return "European defense readiness and procurement"
+    words = [
+        w
+        for w in re.findall(r"[a-z0-9]+", str(row.get("title") or "").lower())
+        if w not in {"the", "and", "for", "with", "from", "that", "this", "after", "amid"}
+    ]
+    return " ".join(words[:6]).title() or str(primary or "Headline cluster")
+
+
+def build_signal_clusters(signals: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    grouped: Dict[Tuple[str, str], List[Dict[str, Any]]] = {}
+    for row in signals:
+        grouped.setdefault((str(row.get("primary_topic") or "unassigned"), _cluster_title(row)), []).append(row)
+
+    clusters: List[Dict[str, Any]] = []
+    for (topic, title), rows in grouped.items():
+        rows_sorted = sorted(rows, key=lambda item: str(item.get("published_at") or ""), reverse=True)
+        families = {_source_family(str(row.get("source") or "")) for row in rows_sorted}
+        signal_level = max((row.get("signal_class") or "noise" for row in rows_sorted), key=lambda value: SIGNAL_RANK.get(value, 0))
+        spillovers = sorted({label for row in rows_sorted for label in (row.get("spillover_topics") or [])})
+        latest = rows_sorted[0].get("published_at", "-") if rows_sorted else "-"
+        clusters.append(
+            {
+                "title": title,
+                "primary_topic": topic,
+                "signal_level": signal_level,
+                "source_count": len(families),
+                "headline_count": len(rows_sorted),
+                "latest_time": latest,
+                "key_headlines": rows_sorted[:3],
+                "source_diversity": "confirmed cluster" if len(families) >= 2 else "limited source diversity",
+                "spillovers": spillovers,
+            }
+        )
+    clusters.sort(
+        key=lambda item: (
+            SIGNAL_RANK.get(item.get("signal_level"), 0),
+            int(item.get("headline_count") or 0),
+            str(item.get("latest_time") or ""),
+        ),
+        reverse=True,
+    )
+    return clusters
+
+
 def render_all_watchlists_scan_markdown(result: Dict[str, Any]) -> str:
     signals = result.get("signals") or []
     rejected = result.get("rejected") or []
+    clusters = build_signal_clusters(signals)
     lines = [
-        "# Signal Scan: all-watchlists",
+        f"# Watchlist Signal Scan - Last {result.get('since')}",
         f"Window: last {result.get('since')}",
         f"Sources: {','.join(result.get('sources') or [])}",
-        f"New items scanned: {result.get('new_items_scanned', 0)}",
+        f"Items scanned: {result.get('new_items_scanned', 0)}",
         f"Signals found: {len(signals)}",
+        f"Clusters found: {len(clusters)}",
     ]
+    if clusters:
+        lines.extend(["", "## Top Alerts"])
+        for cluster in clusters[:5]:
+            label = "HIGH" if cluster.get("signal_level") == "high_signal" else "MEDIUM" if cluster.get("signal_level") == "medium_signal" else "LOW"
+            lines.append(f"- {label}: {cluster.get('title')}, {cluster.get('headline_count')} headlines, {cluster.get('source_count')} sources")
+
+    diagnostics = result.get("routing_diagnostics") or {}
+    if diagnostics:
+        lines.extend(
+            [
+                "",
+                "## Routing Diagnostics",
+                f"- Total scanned: {diagnostics.get('total_scanned', 0)}",
+                f"- Candidate matches before routing: {diagnostics.get('candidate_matches_before_routing', 0)}",
+                f"- Shown signals after routing: {diagnostics.get('shown_signals_after_routing', len(signals))}",
+                f"- Clusters found: {len(clusters)}",
+                f"- Suppressed duplicates: {diagnostics.get('suppressed_duplicates', 0)}",
+                f"- Rejected by hard gates: {diagnostics.get('rejected_by_hard_gates', 0)}",
+            ]
+        )
+        top_reasons = diagnostics.get("top_reject_reasons") or []
+        if top_reasons:
+            lines.append("- Top reject reasons:")
+            for reason, count in top_reasons:
+                lines.append(f"  - {count}x {reason}")
 
     grouped: Dict[str, List[Dict[str, Any]]] = {}
     for row in signals:
@@ -1156,33 +1518,45 @@ def render_all_watchlists_scan_markdown(result: Dict[str, Any]) -> str:
     if not grouped:
         lines.extend(["", f"No high or medium signals found in the last {result.get('since')}."])
 
-    def rows_for(topic: str, signal_class: str) -> List[Dict[str, Any]]:
-        return [row for row in grouped.get(topic, []) if row.get("signal_class") == signal_class]
-
+    if grouped:
+        lines.extend(["", "## Watchlist Sections"])
     for topic in sorted(grouped):
-        lines.extend(["", f"## {topic}"])
-        for label, signal_class in (("High Signal", "high_signal"), ("Medium Signal", "medium_signal"), ("Low Signal", "low_signal")):
-            rows = rows_for(topic, signal_class)
-            if not rows:
-                continue
-            lines.extend(["", f"### {label}"])
-            for idx, row in enumerate(rows, start=1):
+        lines.extend(["", f"### {topic}"])
+        for cluster in [cluster for cluster in clusters if cluster.get("primary_topic") == topic]:
+            lines.extend(["", f"#### Cluster: {cluster.get('title')}"])
+            lines.append(f"Signal level: {cluster.get('signal_level')}")
+            lines.append(f"Sources: {cluster.get('source_count')}")
+            lines.append(f"Headlines: {cluster.get('headline_count')}")
+            lines.append(f"Latest: {cluster.get('latest_time')}")
+            lines.append(f"Source diversity: {cluster.get('source_diversity')}")
+            if cluster.get("spillovers"):
+                lines.append(f"Spillover: {', '.join(cluster.get('spillovers') or [])}")
+            lines.append("Key headlines:")
+            for row in cluster.get("key_headlines") or []:
+                lines.append(f"- {_headline_link(row)}")
                 matched = ", ".join(row.get("matched_terms") or []) or "-"
                 secondary = ", ".join(row.get("secondary_topics") or []) or "-"
-                lines.append(f"{idx}. [{row.get('title', 'Untitled')}]({row.get('url', '')})")
+                spillover = ", ".join(row.get("spillover_topics") or []) or "-"
                 lines.append(f"   Source: {row.get('source', '-')}")
                 lines.append(f"   Time: {row.get('published_at', '-')}")
                 lines.append(f"   Primary topic: {row.get('primary_topic', '-')}")
                 lines.append(f"   Secondary topics: {secondary}")
+                lines.append(f"   Spillover topics: {spillover}")
                 lines.append(f"   Signal: {row.get('signal_class')}")
                 lines.append(f"   Matched terms: {matched}")
                 lines.append(f"   Source quality: {row.get('source_quality', '-')}")
                 lines.append(f"   Why it matters: {row.get('why', '-')}")
 
+    spillover_rows = [cluster for cluster in clusters if cluster.get("spillovers")]
+    if spillover_rows:
+        lines.extend(["", "## Market / Energy Spillover"])
+        for cluster in spillover_rows:
+            lines.append(f"- {cluster.get('title')}: {', '.join(cluster.get('spillovers') or [])}")
+
     if rejected:
         lines.extend(["", "## Rejected / Demoted"])
         for row in rejected:
-            lines.append(f"- [{row.get('title', 'Untitled')}]({row.get('url', '')})")
+            lines.append(f"- {_headline_link(row)}")
             lines.append(f"  Reason: {row.get('reject_reason') or row.get('why') or '-'}")
 
     summary = result.get("watchlist_summary") or []

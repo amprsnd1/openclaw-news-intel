@@ -21,6 +21,7 @@ news-intel source-groups
 news-intel source-health
 news-intel ingest --mode rss
 news-intel ingest --mode all
+news-intel scan --all-watchlists --since "<window>" --min-confidence medium --group-by-primary
 news-intel scan --all-watchlists --since "<window>" --min-confidence medium --primary-only
 news-intel scan --topic "<topic>" --since "<window>"
 news-intel scan --topic "<topic>" --since "<window>" --source rss,google_news_rss
@@ -47,7 +48,7 @@ news-intel digest --topic "<topic>" --days <number> --include-metadata-only
 - GDELT is the primary strategic topic discovery source.
 - RSS is fallback and remains the core safe ingestion path.
 - For quick news monitoring, prefer `scan`.
-- For morning scans across all topics, prefer `news-intel scan --all-watchlists --since "24h" --min-confidence medium --primary-only`.
+- For morning scans across all topics, prefer `news-intel scan --all-watchlists --since "24h" --min-confidence medium --group-by-primary`.
 - For single-topic quick monitoring, use `news-intel scan --topic "<topic>" --since "24h" --min-confidence medium` and let topic defaults choose source groups.
 - Use explicit `--source` only when the user asks for a specific source group.
 - For strategic defense/security topics, topic defaults include `defense_specialist`, `european_local`, `google_news_rss`, `official_defense`, and `official_eu`.
@@ -66,11 +67,18 @@ news-intel digest --topic "<topic>" --days <number> --include-metadata-only
 - Always report GDELT rate limits and cache usage.
 - Always distinguish high, medium, low confidence direct matches, near misses, and gaps.
 - For scan output, always distinguish high, medium, and low signals, then report source status and gaps.
-- For morning scans, prefer primary-only output.
+- For morning scans, prefer group-by-primary output.
 - Do not duplicate the same article across multiple watchlists.
+- Use `--group-by-primary` for recall-safe morning scans; use `--primary-only` only for legacy strict filtering.
+- Morning scan output should group repeated headlines into event clusters.
+- Use primary, secondary, and spillover routing when summarizing all-watchlist scans.
 - Use `--show-rejected` when the user asks why something appeared or did not appear.
 - High-alert claims should mention source diversity.
-- Always include real URLs when available.
+- Always include markdown links with real URLs when available.
+- Do not classify market-only Iran items as primary Iran war signals; route inflation, rates, oil, shipping, and commodity-flow items to `global_trade_and_country_flows` with `iran_war_risk` as secondary when relevant.
+- Do not classify non-EU energy stories as `eu_energy_security`.
+- Do not classify NATO Europe stories as `china_taiwan_risk` unless China, Taiwan, PLA, Pacific, or semiconductor geopolitical context is present.
+- Do not classify generic defense tech as `europe_ru_war_preparations` unless it is linked to Europe, Russia, NATO, readiness, procurement, deployment, or infrastructure hardening.
 - If Fundus returns enriched=0, report the eligibility breakdown and skipped examples.
 - Always include source, date, title, and URL when reporting article results.
 - Always disclose access_mode and enrichment_status when reporting collected topic results.
@@ -105,7 +113,7 @@ news-intel stats
 ```
 For morning watchlist coverage, run:
 ```bash
-news-intel scan --all-watchlists --since "24h" --min-confidence medium --primary-only
+news-intel scan --all-watchlists --since "24h" --min-confidence medium --group-by-primary
 ```
 For quick single-topic monitoring, run:
 ```bash
@@ -125,7 +133,7 @@ news-intel scan --topic "ukraine_financing" --since "24h" --min-confidence mediu
 ```
 Natural language mappings:
 - "check the latest signals" -> `news-intel scan --topic "<topic>" --since "2h" --only-new --min-confidence medium`
-- "morning headlines" -> `news-intel scan --all-watchlists --since "24h" --min-confidence medium --primary-only`
+- "morning headlines" -> `news-intel scan --all-watchlists --since "24h" --min-confidence medium --group-by-primary`
 - "scan the last 2 hours" -> `news-intel scan --topic "<topic>" --since "2h" --only-new --min-confidence medium`
 - "morning scan for Europe-Russia war prep" -> `news-intel scan --topic "europe_ru_war_preparations" --since "24h" --min-confidence medium`
 - "market signal scan" -> `news-intel scan --topic "global_trade_and_country_flows" --since "24h" --min-confidence medium`

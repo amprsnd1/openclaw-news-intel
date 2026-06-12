@@ -9,7 +9,15 @@ import pytest
 from news_pipeline.cli import cmd_scan, cmd_source_groups, cmd_source_health
 from news_pipeline.config import load_source_groups
 from news_pipeline.normalize import utc_now_iso
-from news_pipeline.scanner import classify_across_watchlists, classify_signal, render_scan_markdown, resolve_scan_sources, run_scan
+from news_pipeline.scanner import (
+    build_signal_clusters,
+    classify_across_watchlists,
+    classify_signal,
+    render_all_watchlists_scan_markdown,
+    render_scan_markdown,
+    resolve_scan_sources,
+    run_scan,
+)
 from news_pipeline.storage import Storage
 
 
@@ -673,6 +681,31 @@ def test_primary_only_demotes_secondary_topic(monkeypatch, storage: Storage) -> 
     assert "Primary topic is iran_war_risk" in result["rejected"][0]["reject_reason"]
 
 
+def test_group_by_primary_preserves_secondary_discovered_signal(monkeypatch, storage: Storage) -> None:
+    iran = _simple_watchlist("iran_war_risk", ["Iran", "US", "Strait of Hormuz"], ["missile strike", "shipping", "US base"])
+    trade = _simple_watchlist("global_trade_and_country_flows", ["Iran", "Strait of Hormuz"], ["shipping"])
+    monkeypatch.setattr(
+        "news_pipeline.scanner.fetch_rss",
+        lambda source_cfg, max_items=50: [_rss_item("Iran missile strike near US base disrupts Strait of Hormuz shipping")],
+    )
+
+    result = run_scan(
+        storage,
+        _sources(),
+        trade,
+        None,
+        since="24h",
+        sources="rss",
+        only_new=False,
+        all_watchlists=[iran, trade],
+        group_by_primary=True,
+    )
+
+    assert result["signals"]
+    assert result["signals"][0]["primary_topic"] == "iran_war_risk"
+    assert "global_trade_and_country_flows" in result["signals"][0]["secondary_topics"]
+
+
 def test_rejected_items_hidden_by_default_and_shown_when_requested(monkeypatch, storage: Storage) -> None:
     wl = _simple_watchlist("ukraine_financing", ["Ukraine"], ["loan"])
     monkeypatch.setattr(
@@ -748,6 +781,7 @@ def test_all_watchlists_primary_only_cli_runs_without_duplicates(monkeypatch, ca
             show_seen=False,
             show_rejected=False,
             primary_only=True,
+            group_by_primary=False,
             format="markdown",
             max_queries=1,
             use_cache_first=False,
@@ -756,7 +790,174 @@ def test_all_watchlists_primary_only_cli_runs_without_duplicates(monkeypatch, ca
     out = capsys.readouterr().out
 
     assert rc == 0
-    assert "# Signal Scan: all-watchlists" in out
+    assert "# Watchlist Signal Scan - Last 24h" in out
     assert "Primary topic: ukraine_financing" in out
     assert out.count("Ukraine secures IMF loan tranche for budget support") == 1
     assert "## Watchlist Summary" in out
+    assert "## Routing Diagnostics" in out
+    assert "Candidate matches before routing:" in out
+    assert "Suppressed duplicates:" in out
+
+
+def test_all_watchlists_group_by_primary_preserves_high_medium_and_secondary(monkeypatch, capsys, temp_db_env: Path) -> None:
+    iran = _simple_watchlist("iran_war_risk", ["Iran", "US", "Strait of Hormuz"], ["missile strike", "shipping", "US base"])
+    trade = _simple_watchlist("global_trade_and_country_flows", ["Iran", "Strait of Hormuz"], ["shipping"])
+    monkeypatch.setattr("news_pipeline.cli.load_watchlists", lambda: [iran, trade])
+    monkeypatch.setattr("news_pipeline.cli.load_sources", lambda: _sources())
+    monkeypatch.setattr("news_pipeline.scanner.fetch_rss", lambda source_cfg, max_items=50: [_rss_item("Iran missile strike near US base disrupts Strait of Hormuz shipping")])
+
+    rc = cmd_scan(
+        argparse.Namespace(
+            all_watchlists=True,
+            topic=None,
+            query=None,
+            since="24h",
+            max_items=50,
+            source="rss",
+            min_confidence="medium",
+            only_new=False,
+            show_seen=False,
+            show_rejected=False,
+            primary_only=False,
+            group_by_primary=True,
+            format="markdown",
+            max_queries=1,
+            use_cache_first=False,
+        )
+    )
+    out = capsys.readouterr().out
+
+    assert rc == 0
+    assert "Primary topic: iran_war_risk" in out
+    assert "Secondary topics: global_trade_and_country_flows" in out
+    assert out.count("Iran missile strike near US base disrupts Strait of Hormuz shipping") == 1
+    assert "| iran_war_risk | 1 | 0 | 0 |" in out
+
+
+def test_iran_military_strike_routes_primary_to_iran_war_risk() -> None:
+    iran = _simple_watchlist("iran_war_risk", ["Iran", "US"], ["war"], event=["missile", "strike", "base"])
+    trade = _simple_watchlist("global_trade_and_country_flows", ["Iran", "global"], ["oil", "shipping", "inflation"])
+
+    signal = classify_across_watchlists(_rss_item("US launches missile strikes on Iran after base attack"), [iran, trade])
+
+    assert signal["primary_topic"] == "iran_war_risk"
+    assert signal["signal_class"] in {"high_signal", "medium_signal"}
+
+
+def test_iran_inflation_ecb_headline_routes_primary_to_global_trade_secondary_iran() -> None:
+    iran = _simple_watchlist("iran_war_risk", ["Iran", "US"], ["war"])
+    trade = _simple_watchlist("global_trade_and_country_flows", ["Iran", "ECB", "eurozone"], ["inflation", "rates", "interest rates"])
+
+    signal = classify_across_watchlists(
+        _rss_item("ECB raises eurozone interest rates as Iran war stokes inflation"),
+        [iran, trade],
+    )
+
+    assert signal["primary_topic"] == "global_trade_and_country_flows"
+    assert "iran_war_risk" in signal["secondary_topics"]
+    assert "inflation" in signal["spillover_topics"]
+
+
+def test_non_eu_energy_headlines_rejected_from_eu_energy_security() -> None:
+    energy = _simple_watchlist("eu_energy_security", ["EU", "Europe"], ["oil", "gas", "energy security"])
+
+    cuba = classify_signal(_rss_item("US slaps sanctions on Cuba's oil and gas company"), energy)
+    caribbean = classify_signal(_rss_item("Caribbean countries are feeling the squeeze from this energy crisis"), energy)
+
+    assert cuba["signal_class"] == "noise"
+    assert "no EU/Europe/member-state energy-security context" in cuba["reject_reason"]
+    assert caribbean["signal_class"] == "noise"
+    assert "no EU/Europe/member-state energy-security context" in caribbean["reject_reason"]
+
+
+def test_nato_europe_military_cut_rejected_from_china_taiwan_risk() -> None:
+    china = _simple_watchlist("china_taiwan_risk", ["China", "Taiwan", "Pacific"], ["fighter jets", "warships", "blockade"])
+
+    signal = classify_signal(_rss_item("US plans major cut to fighter jets, warships for NATO operations in Europe"), china)
+
+    assert signal["signal_class"] == "noise"
+    assert "no China/Taiwan/PLA/Pacific/semiconductor context" in signal["reject_reason"]
+
+
+def test_china_taiwan_blockade_routes_primary_to_china_taiwan_risk() -> None:
+    china = _simple_watchlist("china_taiwan_risk", ["China", "Taiwan", "Taiwan Strait"], ["blockade", "PLA", "military"])
+    europe = _watchlist()
+
+    signal = classify_across_watchlists(_rss_item("China launches PLA blockade drills around Taiwan Strait"), [china, europe])
+
+    assert signal["primary_topic"] == "china_taiwan_risk"
+    assert signal["signal_class"] in {"high_signal", "medium_signal"}
+
+
+def test_generic_defense_tech_not_promoted_as_europe_war_prep() -> None:
+    signal = classify_signal(_rss_item("MBDA showcases hybrid high-energy laser interceptor counter-drone system"), _watchlist())
+
+    assert signal["signal_class"] in {"noise", "low_signal"}
+    assert signal["signal_class"] not in {"high_signal", "medium_signal"}
+
+
+def test_europe_procurement_headline_routes_primary_to_europe_war_prep() -> None:
+    europe = _watchlist()
+    iran = _simple_watchlist("iran_war_risk", ["Iran"], ["strike"])
+
+    signal = classify_across_watchlists(
+        _rss_item("NATO announces air defense procurement for Eastern Europe readiness"),
+        [europe, iran],
+    )
+
+    assert signal["primary_topic"] == "europe_ru_war_preparations"
+    assert signal["signal_class"] in {"high_signal", "medium_signal"}
+
+
+def test_all_watchlists_renderer_outputs_links_clusters_and_spillover() -> None:
+    now = utc_now_iso()
+    signals = [
+        {
+            "title": "US launches missile strikes on Iran",
+            "url": "https://example.com/iran-1",
+            "source": "Defense News",
+            "published_at": now,
+            "primary_topic": "iran_war_risk",
+            "secondary_topics": ["global_trade_and_country_flows"],
+            "spillover_topics": ["oil", "shipping"],
+            "signal_class": "high_signal",
+            "source_quality": "high",
+            "matched_terms": ["Iran", "missile", "strikes"],
+            "why": "Direct military escalation.",
+        },
+        {
+            "title": "Iran retaliates with missile fire near US base",
+            "url": "https://example.com/iran-2",
+            "source": "DW",
+            "published_at": now,
+            "primary_topic": "iran_war_risk",
+            "secondary_topics": ["global_trade_and_country_flows"],
+            "spillover_topics": ["oil"],
+            "signal_class": "high_signal",
+            "source_quality": "medium",
+            "matched_terms": ["Iran", "missile", "base"],
+            "why": "Direct military escalation.",
+        },
+    ]
+    result = {
+        "since": "24h",
+        "sources": ["rss"],
+        "new_items_scanned": 2,
+        "signals": signals,
+        "rejected": [],
+        "routing_diagnostics": {"total_scanned": 2, "candidate_matches_before_routing": 2, "shown_signals_after_routing": 2},
+        "watchlist_summary": [{"watchlist": "iran_war_risk", "high": 2, "medium": 0, "low": 0, "rejected": 0, "status": "Active"}],
+        "source_status": {"rss": "ok"},
+    }
+
+    clusters = build_signal_clusters(signals)
+    out = render_all_watchlists_scan_markdown(result)
+
+    assert clusters[0]["title"] == "US-Iran military escalation"
+    assert clusters[0]["source_count"] == 2
+    assert "Latest:" in out
+    assert "## Top Alerts" in out
+    assert "#### Cluster: US-Iran military escalation" in out
+    assert "[US launches missile strikes on Iran](https://example.com/iran-1)" in out
+    assert "## Market / Energy Spillover" in out
+    assert out.count("US launches missile strikes on Iran") >= 1
