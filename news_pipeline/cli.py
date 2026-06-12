@@ -765,8 +765,6 @@ def cmd_source_groups(_: argparse.Namespace) -> int:
     storage, sources, _ = _load_runtime()
     try:
         groups = load_source_groups()
-        enabled_sources = {str(s.get("id") or s.get("name")) for s in sources if s.get("enabled", True)}
-        enabled_names = {str(s.get("name")) for s in sources if s.get("enabled", True)}
     finally:
         storage.close()
     recommended = {
@@ -781,11 +779,14 @@ def cmd_source_groups(_: argparse.Namespace) -> int:
     lines = ["# Source Groups", ""]
     for name, group in sorted(groups.items()):
         refs = [str(ref) for ref in group.get("sources", [])]
-        enabled_count = sum(1 for ref in refs if ref in enabled_sources or ref in enabled_names or ref in {"rss", "google_news_rss", "gdelt"})
+        summary = _source_group_health_summary(refs, sources)
         lines.append(f"- **{name}**")
         lines.append(f"  Description: {group.get('description') or '-'}")
-        lines.append(f"  Source count: {len(refs)}")
-        lines.append(f"  Enabled source count: {enabled_count}")
+        lines.append(f"  Configured sources: {summary['configured']}")
+        lines.append(f"  Enabled sources: {summary['enabled']}")
+        lines.append(f"  Disabled roadmap: {summary['disabled_roadmap']}")
+        lines.append(f"  Partial feeds: {summary['partial_feed']}")
+        lines.append(f"  Known working: {summary['working']}")
         lines.append(f"  Recommended topics: {recommended.get(name, '-')}")
     print("\n".join(lines))
     return 0
@@ -798,6 +799,124 @@ def _source_ref_matches(source: Dict[str, Any], ref: str) -> bool:
         str(source.get("name") or "").strip().lower().replace(" ", "_"),
         str(source.get("category") or "").strip().lower().replace(" ", "_"),
     }
+
+
+def _source_status(source: Dict[str, Any]) -> str:
+    return str(source.get("status") or "").strip().lower()
+
+
+def _source_has_usable_feed(source: Dict[str, Any]) -> bool:
+    url = str(source.get("url") or "").strip()
+    return bool(url) and url != "roadmap-no-stable-feed"
+
+
+def _source_health_details(source: Dict[str, Any]) -> Dict[str, str]:
+    enabled = bool(source.get("enabled", True))
+    status = _source_status(source)
+    last_error = str(source.get("last_error") or "").strip()
+
+    if status == "partial_feed":
+        return {
+            "health_state": "partial_feed",
+            "last_fetch_status": "partial_feed",
+            "last_error": last_error or "-",
+        }
+    if not enabled and status == "roadmap_no_stable_feed":
+        return {
+            "health_state": "disabled_roadmap",
+            "last_fetch_status": "disabled_roadmap",
+            "last_error": "roadmap_no_stable_feed",
+        }
+    if not enabled:
+        return {
+            "health_state": "disabled",
+            "last_fetch_status": status or "disabled",
+            "last_error": last_error or "-",
+        }
+    if status in {"fetch_error", "error", "failed", "http_error"} or last_error:
+        return {
+            "health_state": "failed_enabled",
+            "last_fetch_status": status or "fetch_error",
+            "last_error": last_error or status or "fetch_error",
+        }
+    if status in {"ok", "success", "local_config_ok", "enabled_live"} or _source_has_usable_feed(source):
+        return {
+            "health_state": "working",
+            "last_fetch_status": status or "local_config_ok",
+            "last_error": "-",
+        }
+    if status:
+        return {
+            "health_state": "unknown",
+            "last_fetch_status": status,
+            "last_error": last_error or "-",
+        }
+    return {
+        "health_state": "not_checked",
+        "last_fetch_status": "not_checked",
+        "last_error": "-",
+    }
+
+
+def _sources_for_ref(ref: str, sources: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    key = (ref or "").strip().lower().replace(" ", "_")
+    if key == "rss":
+        return [source for source in sources if source.get("adapter", "rss") == "rss"]
+    if key in {"google_news_rss", "gdelt"}:
+        return []
+    return [source for source in sources if _source_ref_matches(source, ref)]
+
+
+def _ref_health_details(ref: str, sources: List[Dict[str, Any]]) -> Dict[str, Any]:
+    key = (ref or "").strip().lower().replace(" ", "_")
+    if key in {"google_news_rss", "gdelt"}:
+        return {"enabled": True, "health_state": "working", "sources": []}
+
+    ref_sources = _sources_for_ref(ref, sources)
+    if not ref_sources:
+        return {"enabled": False, "health_state": "unknown", "sources": []}
+
+    enabled = any(bool(source.get("enabled", True)) for source in ref_sources)
+    states = [_source_health_details(source)["health_state"] for source in ref_sources]
+    priority = [
+        "working",
+        "partial_feed",
+        "failed_enabled",
+        "not_checked",
+        "unknown",
+        "disabled_roadmap",
+        "disabled",
+    ]
+    state = next((candidate for candidate in priority if candidate in states), "unknown")
+    return {"enabled": enabled, "health_state": state, "sources": ref_sources}
+
+
+def _source_group_health_summary(refs: List[str], sources: List[Dict[str, Any]]) -> Dict[str, int]:
+    summary = {
+        "configured": len(refs),
+        "enabled": 0,
+        "working": 0,
+        "failed_enabled": 0,
+        "disabled_roadmap": 0,
+        "partial_feed": 0,
+        "unknown": 0,
+    }
+    for ref in refs:
+        details = _ref_health_details(ref, sources)
+        state = str(details["health_state"])
+        if details.get("enabled"):
+            summary["enabled"] += 1
+        if state == "working":
+            summary["working"] += 1
+        elif state == "failed_enabled":
+            summary["failed_enabled"] += 1
+        elif state == "disabled_roadmap":
+            summary["disabled_roadmap"] += 1
+        elif state == "partial_feed":
+            summary["partial_feed"] += 1
+        elif state in {"unknown", "not_checked"}:
+            summary["unknown"] += 1
+    return summary
 
 
 def cmd_source_health(_: argparse.Namespace) -> int:
@@ -816,72 +935,45 @@ def cmd_source_health(_: argparse.Namespace) -> int:
         if row.get("stored_relevance_class") in {"direct_match", "near_miss"}:
             data["signals"] += 1
 
-    def live_enabled(source: Dict[str, Any]) -> bool:
-        return bool(source.get("enabled", True)) and source.get("status") != "roadmap_no_stable_feed" and bool(source.get("url")) and source.get("url") != "roadmap-no-stable-feed"
-
-    def sources_for_ref(ref: str) -> List[Dict[str, Any]]:
-        key = (ref or "").strip().lower().replace(" ", "_")
-        if key == "rss":
-            return [source for source in sources if source.get("adapter", "rss") == "rss"]
-        if key in {"google_news_rss", "gdelt"}:
-            return []
-        return [source for source in sources if _source_ref_matches(source, ref)]
-
-    def ref_enabled(ref: str) -> bool:
-        key = (ref or "").strip().lower().replace(" ", "_")
-        if key in {"google_news_rss", "gdelt"}:
-            return True
-        return any(source.get("enabled", True) for source in sources_for_ref(ref))
-
-    def ref_working(ref: str) -> bool:
-        key = (ref or "").strip().lower().replace(" ", "_")
-        if key in {"google_news_rss", "gdelt"}:
-            return True
-        return any(live_enabled(source) for source in sources_for_ref(ref))
-
-    def ref_failed(ref: str) -> bool:
-        key = (ref or "").strip().lower().replace(" ", "_")
-        if key in {"google_news_rss", "gdelt"}:
-            return False
-        ref_sources = sources_for_ref(ref)
-        return bool(ref_sources) and not any(live_enabled(source) for source in ref_sources)
-
     lines = ["# Source Health", "", "## Groups"]
     for name, group in sorted(groups.items()):
         refs = [str(ref) for ref in group.get("sources", [])]
-        group_sources = [source for ref in refs for source in sources_for_ref(ref)]
-        enabled_count = sum(1 for ref in refs if ref_enabled(ref))
-        working_count = sum(1 for ref in refs if ref_working(ref))
-        failed_count = sum(1 for ref in refs if ref_failed(ref))
+        group_sources = [source for ref in refs for source in _sources_for_ref(ref, sources)]
+        summary = _source_group_health_summary(refs, sources)
         items = sum(by_source.get(str(source.get("name")), {}).get("items", 0) for source in group_sources)
         signals = sum(by_source.get(str(source.get("name")), {}).get("signals", 0) for source in group_sources)
         rate = (signals / items) if items else 0.0
         lines.append(f"- **{name}**")
         lines.append(f"  Description: {group.get('description') or '-'}")
-        lines.append(f"  Configured source count: {len(refs)}")
-        lines.append(f"  Enabled source count: {enabled_count}")
-        lines.append(f"  Working source count: {working_count}")
-        lines.append(f"  Failed source count: {failed_count}")
+        lines.append(f"  Configured source count: {summary['configured']}")
+        lines.append(f"  Enabled source count: {summary['enabled']}")
+        lines.append(f"  Working enabled source count: {summary['working']}")
+        lines.append(f"  Failed enabled source count: {summary['failed_enabled']}")
+        lines.append(f"  Disabled roadmap source count: {summary['disabled_roadmap']}")
+        lines.append(f"  Partial feed source count: {summary['partial_feed']}")
+        lines.append(f"  Unknown/not checked source count: {summary['unknown']}")
         lines.append(f"  Items last 24h: {items}")
         lines.append(f"  Signals last 24h: {signals}")
         lines.append(f"  Signal rate: {rate:.2f}")
+        lines.append("  Last error: -")
         lines.append("  Last checked: local metadata only")
 
     lines.extend(["", "## Sources"])
     for source in sorted(sources, key=lambda s: str(s.get("id") or s.get("name"))):
         name = str(source.get("name"))
         counts = by_source.get(name, {"items": 0, "signals": 0})
-        status = source.get("status") or ("enabled_live" if live_enabled(source) else "disabled")
-        last_error = "-" if status == "enabled_live" else status
+        details = _source_health_details(source)
+        status = source.get("status") or details["health_state"]
         lines.append(f"- **{source.get('id') or name}** | {name}")
         lines.append(f"  Group/category: {source.get('category', source.get('adapter', '-'))}")
         lines.append(f"  Enabled: {bool(source.get('enabled', True))}")
         lines.append(f"  Status: {status}")
         lines.append(f"  Access mode: {source.get('access_mode', '-')}")
-        lines.append(f"  Last fetch status: {'local_config_ok' if status == 'enabled_live' else status}")
+        lines.append(f"  Health state: {details['health_state']}")
+        lines.append(f"  Last fetch status: {details['last_fetch_status']}")
         lines.append(f"  Items last 24h: {counts.get('items', 0)}")
         lines.append(f"  Signals last 24h: {counts.get('signals', 0)}")
-        lines.append(f"  Last error: {last_error}")
+        lines.append(f"  Last error: {details['last_error']}")
         lines.append("  Last checked: local metadata only")
     print("\n".join(lines))
     return 0
@@ -920,12 +1012,21 @@ def cmd_doctor(_: argparse.Namespace) -> int:
             google_ok = bool(google_cfg.get("enabled", True))
             watchlists_ok = bool(watchlists)
             groups_ok = bool(source_groups)
+            failed_enabled_sources = [
+                str(source.get("id") or source.get("name"))
+                for source in sources
+                if _source_health_details(source)["health_state"] == "failed_enabled"
+            ]
             if not rss_ok:
                 fatal.append("no enabled RSS sources configured")
             if not watchlists_ok:
                 fatal.append("no watchlists loaded")
             if not groups_ok:
                 fatal.append("no source groups loaded")
+            if not google_ok:
+                degraded.append("Google News RSS unavailable")
+            if failed_enabled_sources:
+                degraded.append(f"enabled source failures: {', '.join(failed_enabled_sources[:5])}")
     except Exception as exc:
         fatal.append(f"config load failed: {exc}")
 
@@ -973,7 +1074,7 @@ def cmd_doctor(_: argparse.Namespace) -> int:
         gdelt_message += f" ({gdelt.get('message', '')})"
     fundus_message = "available" if fundus.get("available") else f"unavailable ({fundus.get('message', '')})"
 
-    status_label = "broken" if fatal else "degraded" if degraded else "usable"
+    status_label = "broken" if fatal else "usable_but_degraded" if degraded else "usable"
     lines = [
         "news-intel doctor",
         "Core:",
@@ -999,9 +1100,27 @@ def cmd_doctor(_: argparse.Namespace) -> int:
         for item in fatal:
             lines.append(f"  - {item}")
     if degraded:
-        lines.append("Degraded issues:")
+        lines.append("Degraded components:")
         for item in degraded:
             lines.append(f"  - {item}")
+        lines.append("Why this is not fatal:")
+        lines.append("  - RSS scanning still works when core config, database, and RSS sources are healthy.")
+        lines.append("  - morning-scan still works without optional metadata/enrichment adapters.")
+        lines.append("  - GDELT, Google News RSS, Fundus, OpenClaw registration, and non-core feeds are optional or external.")
+        lines.append("Recommended action:")
+        if gdelt_runtime.get("last_429_time"):
+            lines.append("  - Retry GDELT later; use conservative --max-queries and --use-cache-first.")
+        if not gdelt.get("available"):
+            lines.append("  - Check GDELT adapter availability only if topic collection needs it.")
+        if not fundus.get("available"):
+            lines.append("  - Install optional Fundus extras only if public article enrichment is needed.")
+        if not google_ok:
+            lines.append("  - Re-enable Google News RSS only if query headline discovery is needed.")
+        if any("OpenClaw" in item for item in degraded):
+            lines.append("  - Run scripts/install_openclaw_skill.sh if OpenClaw should use the skill.")
+        if any(item.startswith("enabled source failures") for item in degraded):
+            lines.append("  - Run news-intel source-health to inspect failed_enabled sources.")
+        lines.append("  - Use news-intel morning-scan for normal operation.")
     lines.append(f"Status: {status_label}")
     print("\n".join(lines))
 

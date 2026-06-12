@@ -3,7 +3,7 @@
 This project is prepared for OpenClaw to call `news-intel` as a local tool.
 
 OpenClaw does not scrape news directly. It calls the local CLI through the News Intelligence skill. The recommended command is `news-intel morning-scan`.
-Canonical project path: `/path/to/news-intel`.
+Project path convention: `<repo>` means the local checkout path of this repository.
 
 ## Scope
 
@@ -19,6 +19,14 @@ openclaw skills info news-intelligence
 ```
 
 If the skill is stale or not visible, restart OpenClaw with `openclaw stop` then `openclaw start`. Run `news-intel doctor` to check local CLI, config, adapters, and skill visibility.
+
+`news-intel doctor` exit codes:
+
+- `0`: usable.
+- `1`: broken required component.
+- `2`: usable but degraded.
+
+OpenClaw should treat exit `2` as non-fatal. For example, a recent GDELT HTTP 429 means optional metadata discovery is rate-limited; continue using `news-intel morning-scan` unless core RSS, config, watchlists, source groups, or the database are broken.
 
 ## Safe Command Set
 
@@ -53,9 +61,9 @@ If the skill is stale or not visible, restart OpenClaw with `openclaw stop` then
 
 ## CLI Path Stability
 
-- Expected CLI binary: `/path/to/news-intel/.venv/bin/news-intel`
+- Expected CLI binary after setup: `<repo>/.venv/bin/news-intel`
 - Recommended symlink for shell/OpenClaw compatibility:
-  - `/opt/homebrew/bin/news-intel -> /path/to/news-intel/.venv/bin/news-intel`
+  - `/opt/homebrew/bin/news-intel -> <repo>/.venv/bin/news-intel`
 - Do not rely on `PYTHONPATH` as the normal runtime path.
 
 ## Strategic Watchlist Topics
@@ -102,6 +110,7 @@ Example commands:
 - Fundus is not used by default in scan.
 - Google News RSS is metadata/headline discovery only.
 - Official sources are enabled only where stable public feeds are configured; otherwise they remain disabled roadmap placeholders.
+- `source-health` separates `failed_enabled` live feed failures from `disabled_roadmap` placeholders; OpenClaw should not report roadmap placeholders as broken sources.
 - Fundus is optional enrichment only.
 - No paywall bypassing.
 - No scraping subscription-only content.

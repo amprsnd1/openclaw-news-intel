@@ -1,12 +1,12 @@
 # News Intelligence Skill
 Use this skill to search, ingest, and summarize news through the local `news-intel` CLI.
 This skill is for using the existing local news intelligence pipeline. It is not for modifying source code.
-## Canonical Project Path
-Use the canonical project path:
-`/path/to/news-intel`
+## Project Path
+Use the repository checkout path when a path is needed:
+`<repo>`
 
 The expected CLI path is:
-`/path/to/news-intel/.venv/bin/news-intel`
+`<repo>/.venv/bin/news-intel`
 ## Tool
 The local CLI command is:
 ```bash
@@ -50,6 +50,9 @@ news-intel digest --topic "<topic>" --days <number> --include-metadata-only
 ## Core rules
 - GDELT is the primary strategic topic discovery source.
 - RSS is fallback and remains the core safe ingestion path.
+- `news-intel doctor` exit codes: `0` means usable, `1` means broken required component, `2` means usable but degraded.
+- If `news-intel doctor` exits `2`, treat it as non-fatal unless core RSS/config/database/watchlists/source groups are broken.
+- If doctor reports GDELT rate-limited, continue using `news-intel morning-scan`; GDELT is optional metadata discovery.
 - For quick news monitoring, prefer `scan`.
 - Always refresh RSS before a morning scan.
 - For morning scans across all topics, prefer `news-intel morning-scan`.

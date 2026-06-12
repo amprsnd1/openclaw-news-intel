@@ -61,7 +61,7 @@ RSS, Google News RSS, and GDELT discover headlines and metadata. Watchlists defi
 
 ```bash
 git clone <repo-url>
-cd news-intel
+cd openclaw-news-intel
 bash scripts/setup.sh
 source .venv/bin/activate
 news-intel doctor
@@ -81,6 +81,15 @@ Then ask OpenClaw:
 Use News Intelligence. Run morning scan.
 ```
 
+## Path convention
+
+In examples, `<repo>` means the local checkout path of this repository.
+
+```bash
+export NEWS_INTEL_HOME=/path/to/news-intel
+cd "$NEWS_INTEL_HOME"
+```
+
 ## Main command
 
 ```bash
@@ -90,6 +99,18 @@ news-intel morning-scan
 Use this for daily headline monitoring, fast signal detection, watchlist alerts, and OpenClaw morning briefings.
 
 `morning-scan` runs fresh RSS ingest first, then scans all watchlists for the last 24 hours, groups repeated headlines into clusters, routes each headline to one primary topic, and returns concise markdown.
+
+## Doctor exit codes
+
+`news-intel doctor` distinguishes broken setups from usable degraded setups:
+
+| Exit code | Status | Meaning |
+|---:|---|---|
+| 0 | `usable` | Core CLI, config, database, watchlists, source groups, and RSS path are healthy. |
+| 1 | `broken` | A required core component is broken, such as config loading, database initialization, watchlists, source groups, or RSS core setup. |
+| 2 | `usable_but_degraded` | The setup can still run, but an optional or external component is degraded. |
+
+Common exit `2` examples include recent GDELT HTTP 429 rate limits, GDELT unavailable, Fundus unavailable, missing OpenClaw skill registration, disabled Google News RSS, or failed enabled non-core sources. Exit `2` does not mean `morning-scan` is broken.
 
 ## Which command should I use?
 
@@ -153,6 +174,8 @@ Watchlists live in `config/watchlists.yaml`. They define context terms, core ter
 - Reuters/Bloomberg/FT/WSJ/Dow Jones: metadata-only unless licensed API access is configured.
 
 This project does not bypass paywalls, logins, publisher restrictions, or subscription-only access.
+
+`news-intel source-health` separates failed enabled feeds from disabled roadmap placeholders. A `disabled_roadmap` source means the source is intentionally not live because no stable public feed is configured; it is not a failed feed.
 
 ## Morning scan mode
 
@@ -237,7 +260,7 @@ Research mode uses GDELT conservatively for topic discovery, Fundus optionally f
 ## Troubleshooting
 
 - `news-intel: command not found`: activate `.venv`, run `python3 -m pip install -e .`, or check `which news-intel`.
-- `news-intel doctor` reports degraded: read the degraded issue list. Fundus unavailable, GDELT 429, and missing OpenClaw registration are non-fatal for local scans.
+- `news-intel doctor` exits `2`: this means `Status: usable_but_degraded`, not broken. Read `Degraded components`, `Why this is not fatal`, and `Recommended action`. Fundus unavailable, GDELT 429, and missing OpenClaw registration are non-fatal for local scans.
 - Fundus unavailable: install the optional extra with `python3 -m pip install -e ".[fundus]"`; on macOS native dependency errors, run `brew install lz4 xz zstd` and retry with Homebrew include/library flags.
 - GDELT HTTP 429: wait and retry later with `--max-queries 1 --use-cache-first`; RSS and Google News RSS scans should still work.
 - `morning-scan` returns zero signals: zero can be normal when no high/medium signals are present. To inspect more, run `news-intel morning-scan --show-seen` or `news-intel scan --all-watchlists --since "24h" --min-confidence low --group-by-primary --show-rejected --show-seen`.

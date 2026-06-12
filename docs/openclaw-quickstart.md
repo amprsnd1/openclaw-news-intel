@@ -58,7 +58,9 @@ OpenClaw should map that to `collect -> enrich -> digest`, not to the default mo
 ## Troubleshooting
 
 - OpenClaw does not see skill: run `bash scripts/install_openclaw_skill.sh`, then restart OpenClaw.
-- `news-intel` not in PATH: activate `.venv` or point `/opt/homebrew/bin/news-intel` to `/path/to/news-intel/.venv/bin/news-intel`.
+- `news-intel` not in PATH: activate `.venv` or point `/opt/homebrew/bin/news-intel` to `<repo>/.venv/bin/news-intel`.
 - Runtime skill stale: rerun the install script to sync `openclaw-skills/news-intelligence/SKILL.md` to `~/.openclaw/custom-skills/news-intelligence/SKILL.md`.
 - Gateway stale: run `openclaw stop` and `openclaw start`.
 - Setup uncertainty: run `news-intel doctor` and follow the reported degraded or fatal issues.
+- `news-intel doctor` exit `2`: treat as `usable_but_degraded`, not fatal. Continue with `news-intel morning-scan` if RSS/config/database are healthy; retry optional GDELT/Fundus/OpenClaw setup later as needed.
+- Source health confusion: `disabled_roadmap` entries are intentionally inactive placeholders for sources without stable public feeds; only `failed_enabled` indicates a live enabled source problem.

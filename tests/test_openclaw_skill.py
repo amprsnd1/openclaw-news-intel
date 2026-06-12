@@ -1,11 +1,16 @@
 from pathlib import Path
 
+LOCAL_REPO_PATH = "/".join(["", "Users", "nick", "news-intel"])
+
 
 def test_openclaw_skill_includes_collect_and_enrich_commands() -> None:
     text = Path("openclaw-skills/news-intelligence/SKILL.md").read_text(encoding="utf-8")
     assert "news-intel source-groups" in text
     assert "news-intel source-health" in text
     assert "news-intel morning-scan" in text
+    assert "`<repo>`" in text
+    assert "`<repo>/.venv/bin/news-intel`" in text
+    assert LOCAL_REPO_PATH not in text
     assert 'news-intel scan --all-watchlists --since "<window>" --min-confidence medium --group-by-primary' in text
     assert 'news-intel scan --all-watchlists --since "<window>" --min-confidence medium --group-by-primary --fresh' in text
     assert 'news-intel scan --all-watchlists --since "<window>" --min-confidence medium --primary-only' in text
@@ -28,6 +33,9 @@ def test_openclaw_skill_includes_collect_and_enrich_commands() -> None:
     assert 'news-intel enrich-url "<public_url>" --adapter fundus' in text
     assert 'news-intel digest --topic "<topic>" --days <number> --include-metadata-only' in text
     assert "GDELT is the primary strategic topic discovery source." in text
+    assert "`news-intel doctor` exit codes: `0` means usable, `1` means broken required component, `2` means usable but degraded." in text
+    assert "If `news-intel doctor` exits `2`, treat it as non-fatal" in text
+    assert "If doctor reports GDELT rate-limited, continue using `news-intel morning-scan`" in text
     assert "Always disclose access_mode and enrichment_status" in text
     assert "Prefer conservative GDELT query counts." in text
     assert "Always distinguish high, medium, low confidence direct matches, near misses, and gaps." in text

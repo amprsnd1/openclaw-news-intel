@@ -34,6 +34,16 @@ Research mode is advanced. Use it after a signal appears or for weekly/deeper re
 - Research workflow: `collector.py`, `fundus_adapter.py`, `gdelt.py`, and `digest.py` support deeper topic collection and digest generation.
 - OpenClaw skill: `openclaw-skills/news-intelligence/SKILL.md` tells OpenClaw which local commands are safe to run.
 
+## Doctor states
+
+`news-intel doctor` has three exit states:
+
+- `0` / `Status: usable`: required local components are healthy.
+- `1` / `Status: broken`: required core setup is broken, such as config, watchlists, source groups, database initialization, or RSS core setup.
+- `2` / `Status: usable_but_degraded`: the system can still run, but an optional or external component is degraded.
+
+Exit `2` is expected for cases such as recent GDELT HTTP 429, missing Fundus, missing OpenClaw runtime skill, disabled Google News RSS, or failed enabled non-core feeds. It is not a failed install if `morning-scan` can still run through RSS.
+
 ## Source access model
 
 - RSS/public feeds: headline and public metadata.

@@ -8,6 +8,14 @@
 - `news-intel doctor`
 - Confirm `news-intel sources` reports `rss: available`.
 
+## Doctor Exit Codes
+
+- `0`: `Status: usable`; required core components are healthy.
+- `1`: `Status: broken`; required core functionality is broken and should be fixed before normal use.
+- `2`: `Status: usable_but_degraded`; optional or external components are degraded, but the local RSS scan path can still work.
+
+Common exit `2` cases are recent GDELT HTTP 429, Fundus unavailable, OpenClaw skill not installed, Google News RSS unavailable, or failed enabled non-core sources. Do not treat exit `2` as a broken install unless `doctor` also reports `Status: broken`.
+
 ## Routine Run
 
 - `news-intel morning-scan`
@@ -67,6 +75,8 @@ Use this after a signal appears or for a weekly/deep research briefing. It is no
 
 ## Failure Handling
 
+- `source-health` reports `failed_enabled` separately from `disabled_roadmap`; disabled roadmap sources are planned placeholders, not broken live feeds.
+- If `news-intel doctor` exits `2`, continue with `news-intel morning-scan` when RSS/config/database are healthy.
 - Fundus missing: acceptable unless explicitly running `--mode fundus`.
 - To enable Fundus on macOS after native header errors: `brew install lz4 xz zstd`, then retry with `CPPFLAGS="-I/opt/homebrew/include" LDFLAGS="-L/opt/homebrew/lib" python3 -m pip install -e ".[fundus]"`.
 - Fundus is only for public supported publishers; restricted outlets remain metadata-only unless licensed API access is configured.

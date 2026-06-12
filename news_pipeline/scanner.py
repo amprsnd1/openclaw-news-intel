@@ -61,6 +61,14 @@ EUROPE_WAR_PREP_ANCHOR_TERMS = [
     "Ukraine war spillover",
     "readiness",
     "procurement",
+    "air defense",
+    "air defence",
+    "missile defense",
+    "missile defence",
+    "drone defense",
+    "counter-drone",
+    "FCAS",
+    "fighter jet",
     "defense budget",
     "defence budget",
     "defense spending",
@@ -106,23 +114,56 @@ HARD_GATES = {
     "europe_ru_war_preparations": {
         "context": [
             "Europe",
+            "European",
             "EU",
             "NATO",
             "Poland",
+            "Polish",
             "Baltics",
+            "Baltic",
             "Estonia",
+            "Estonian",
             "Latvia",
+            "Latvian",
             "Lithuania",
+            "Lithuanian",
             "Finland",
+            "Finnish",
             "Sweden",
+            "Swedish",
             "Germany",
+            "German",
             "France",
+            "French",
             "Romania",
+            "Romanian",
             "Moldova",
+            "Moldovan",
+            "UK",
+            "British",
+            "Britain",
+            "United Kingdom",
+            "Spain",
+            "Spanish",
+            "Italy",
+            "Italian",
+            "Czech",
+            "Slovakia",
+            "Slovak",
+            "Bulgaria",
+            "Bulgarian",
+            "Norway",
+            "Norwegian",
+            "Denmark",
+            "Danish",
+            "Netherlands",
+            "Dutch",
             "Eastern Europe",
             "European Commission",
             "European Council",
             "Russia threat",
+            "Russian threat",
+            "Ukraine war",
             "Ukraine war spillover",
         ],
         "required": [
@@ -154,11 +195,23 @@ HARD_GATES = {
             "energy infrastructure",
             "military logistics",
             "defense industrial base",
+            "defence industrial base",
             "war economy",
             "readiness",
+            "drone defense",
+            "counter-drone",
+            "missile defense",
+            "missile defence",
+            "FCAS",
+            "fighter jet",
+            "warship",
+            "frigate",
+            "submarine",
+            "tank production",
+            "munition production",
         ],
         "missing_context": "no Europe/NATO/member-state context",
-        "missing_required": "no European readiness/procurement/civil defense signal",
+        "missing_required": "missing war-preparation core term",
     },
     "global_trade_and_country_flows": {
         "context": [
@@ -306,37 +359,48 @@ HARD_GATES = {
             "Iranian",
             "Tehran",
             "IRGC",
+            "Islamic Revolutionary Guard",
+            "Quds Force",
             "Israel",
             "Israeli",
             "US forces",
-            "United States",
-            "US",
+            "US base",
+            "US forces in Iraq",
+            "US forces in Syria",
             "Gulf",
+            "Persian Gulf",
             "Hormuz",
             "Strait of Hormuz",
+            "Red Sea",
             "Hezbollah",
             "Houthis",
             "Houthi",
-            "nuclear",
+            "Iraqi militia",
+            "nuclear enrichment",
+            "uranium enrichment",
+            "Natanz",
+            "Fordow",
+            "IAEA Iran",
         ],
         "required": [
             "strike",
+            "airstrike",
             "strikes",
             "missile",
-            "drone",
+            "drone attack",
             "retaliation",
             "war",
             "escalation",
-            "base",
-            "bases",
+            "base attack",
+            "proxy attack",
             "tanker",
-            "nuclear",
-            "proxy",
-            "air defense",
-            "air defence",
+            "shipping attack",
+            "nuclear facility",
+            "sanctions escalation",
+            "military response",
         ],
-        "missing_context": "no Iran/Israel/US forces/Gulf/proxy/nuclear context",
-        "missing_required": "no military escalation, strike, missile, drone, base, tanker, proxy, or nuclear term",
+        "missing_context": "missing Iran/Gulf/proxy context",
+        "missing_required": "missing war/escalation core term",
     },
     "migration_policy_europe": {
         "context": [
@@ -622,6 +686,22 @@ def classify_signal(article: Dict[str, Any], watchlist: Dict[str, Any] | None = 
         )
         return payload
     if gate and gate["passed"]:
+        if watchlist_name in {"iran_war_risk", "europe_ru_war_preparations"}:
+            title_gate = _hard_gate_result(watchlist_name, [title])
+            if title_gate and not title_gate["passed"]:
+                title_missing = [f"headline {item}" for item in title_gate["missing_required_terms"]]
+                reason = f"Hard gate failed for {watchlist_name}: {'; '.join(title_missing)}."
+                payload = _rejection_payload(reason, title_missing)
+                payload.update(
+                    {
+                        "matched_terms": matched_all,
+                        "matched_context_terms": sorted(set(matched_context + gate["matched_gate_context_terms"])),
+                        "matched_core_terms": sorted(set(matched_core)),
+                        "matched_event_triggers": sorted(set(matched_event)),
+                        "matched_financial_terms": sorted(set(matched_financial + gate["matched_gate_required_terms"])),
+                    }
+                )
+                return payload
         matched_context = sorted(set(matched_context + gate["matched_gate_context_terms"]))
         matched_core = sorted(set(matched_core + gate["matched_gate_required_terms"]))
         matched_all = sorted(set(matched_all + gate["matched_gate_context_terms"] + gate["matched_gate_required_terms"]))
@@ -664,7 +744,28 @@ def classify_signal(article: Dict[str, Any], watchlist: Dict[str, Any] | None = 
         signal = "noise"
         why = "No relevant signal found."
 
-    if signal == "medium_signal" and source_quality == "high" and not weak_core_only:
+    if (
+        signal == "medium_signal"
+        and watchlist_name == "iran_war_risk"
+        and gate
+        and gate["passed"]
+        and match_terms_in_fields(strict_fields, ["Hormuz", "Strait of Hormuz"])
+        and match_terms_in_fields(strict_fields, ["strike", "strikes", "missile", "tanker", "shipping attack"])
+    ):
+        signal = "high_signal"
+        why += " Hormuz escalation terms increased signal priority."
+    elif (
+        signal == "medium_signal"
+        and watchlist_name == "europe_ru_war_preparations"
+        and gate
+        and gate["passed"]
+        and match_terms_in_fields(strict_fields, ["NATO"])
+        and match_terms_in_fields(strict_fields, ["Eastern Europe", "Russia threat", "Russian threat"])
+        and match_terms_in_fields(strict_fields, ["troops", "troop deployment", "NATO deployment", "deploys"])
+    ):
+        signal = "high_signal"
+        why += " NATO eastern-flank deployment terms increased signal priority."
+    elif signal == "medium_signal" and source_quality == "high" and not weak_core_only:
         signal = "high_signal"
         why += " High-quality source increased signal priority."
     elif signal == "low_signal" and source_quality == "high" and matched_context and (matched_core or matched_event or matched_financial) and not weak_core_only:

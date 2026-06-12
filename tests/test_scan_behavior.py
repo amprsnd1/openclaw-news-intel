@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from news_pipeline import cli
 from news_pipeline.cli import cmd_morning_scan, cmd_scan, cmd_source_groups, cmd_source_health
 from news_pipeline.config import load_source_groups
 from news_pipeline.normalize import utc_now_iso
@@ -365,6 +366,9 @@ def test_source_groups_command_lists_groups(capsys, temp_db_env: Path) -> None:
     assert "official_eu" in out
     assert "official_financial" in out
     assert "market_signals" in out
+    assert "Disabled roadmap:" in out
+    assert "Partial feeds:" in out
+    assert "Known working:" in out
 
 
 def test_source_quality_boosts_but_does_not_create_signal() -> None:
@@ -517,8 +521,145 @@ def test_source_health_command_returns_group_and_source_status(capsys, temp_db_e
     assert rc == 0
     assert "# Source Health" in out
     assert "Configured source count:" in out
-    assert "Working source count:" in out
+    assert "Working enabled source count:" in out
+    assert "Failed enabled source count:" in out
+    assert "Disabled roadmap source count:" in out
+    assert "Health state:" in out
     assert "Items last 24h:" in out
+
+
+def test_source_health_separates_roadmap_failed_working_and_partial(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    temp_db_env: Path,
+) -> None:
+    storage = Storage(temp_db_env)
+    storage.init_db()
+    sources = [
+        {
+            "id": "working",
+            "name": "Working Feed",
+            "adapter": "rss",
+            "category": "official_defense",
+            "url": "https://example.com/working.rss",
+            "enabled": True,
+            "status": "ok",
+            "access_mode": "public",
+        },
+        {
+            "id": "failed",
+            "name": "Failed Feed",
+            "adapter": "rss",
+            "category": "official_defense",
+            "url": "https://example.com/failed.rss",
+            "enabled": True,
+            "status": "fetch_error",
+            "last_error": "timeout",
+            "access_mode": "public",
+        },
+        {
+            "id": "roadmap",
+            "name": "Roadmap Feed",
+            "adapter": "rss",
+            "category": "official_defense",
+            "url": "roadmap-no-stable-feed",
+            "enabled": False,
+            "status": "roadmap_no_stable_feed",
+            "access_mode": "public",
+        },
+        {
+            "id": "partial",
+            "name": "Partial Feed",
+            "adapter": "rss",
+            "category": "official_defense",
+            "url": "https://example.com/partial.rss",
+            "enabled": True,
+            "status": "partial_feed",
+            "access_mode": "public_or_partial",
+        },
+        {
+            "id": "unknown",
+            "name": "Unknown Feed",
+            "adapter": "rss",
+            "category": "official_defense",
+            "url": "",
+            "enabled": True,
+            "access_mode": "public",
+        },
+    ]
+    monkeypatch.setattr(cli, "_load_runtime", lambda: (storage, sources, []))
+    monkeypatch.setattr(
+        cli,
+        "load_source_groups",
+        lambda: {
+            "official_defense": {
+                "description": "test group",
+                "sources": ["working", "failed", "roadmap", "partial", "unknown"],
+            }
+        },
+    )
+
+    rc = cmd_source_health(argparse.Namespace())
+    out = capsys.readouterr().out
+
+    assert rc == 0
+    assert "Configured source count: 5" in out
+    assert "Enabled source count: 4" in out
+    assert "Working enabled source count: 1" in out
+    assert "Failed enabled source count: 1" in out
+    assert "Disabled roadmap source count: 1" in out
+    assert "Partial feed source count: 1" in out
+    assert "Unknown/not checked source count: 1" in out
+    assert "Health state: working" in out
+    assert "Health state: failed_enabled" in out
+    assert "Health state: disabled_roadmap" in out
+    assert "Health state: partial_feed" in out
+    assert "Health state: not_checked" in out
+    assert "Failed source count:" not in out
+
+
+def test_source_groups_do_not_present_disabled_roadmap_as_failed(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    temp_db_env: Path,
+) -> None:
+    storage = Storage(temp_db_env)
+    storage.init_db()
+    sources = [
+        {
+            "id": "live",
+            "name": "Live Feed",
+            "adapter": "rss",
+            "category": "official_defense",
+            "url": "https://example.com/live.rss",
+            "enabled": True,
+        },
+        {
+            "id": "roadmap",
+            "name": "Roadmap Feed",
+            "adapter": "rss",
+            "category": "official_defense",
+            "url": "roadmap-no-stable-feed",
+            "enabled": False,
+            "status": "roadmap_no_stable_feed",
+        },
+    ]
+    monkeypatch.setattr(cli, "_load_runtime", lambda: (storage, sources, []))
+    monkeypatch.setattr(
+        cli,
+        "load_source_groups",
+        lambda: {"official_defense": {"description": "test group", "sources": ["live", "roadmap"]}},
+    )
+
+    rc = cmd_source_groups(argparse.Namespace())
+    out = capsys.readouterr().out
+
+    assert rc == 0
+    assert "Configured sources: 2" in out
+    assert "Enabled sources: 1" in out
+    assert "Disabled roadmap: 1" in out
+    assert "Known working: 1" in out
+    assert "Failed" not in out
 
 
 def test_google_news_results_remain_public_metadata(monkeypatch, storage: Storage) -> None:
@@ -844,6 +985,42 @@ def test_iran_military_strike_routes_primary_to_iran_war_risk() -> None:
     assert signal["signal_class"] in {"high_signal", "medium_signal"}
 
 
+def test_iran_war_risk_rejects_generic_anti_drone_procurement() -> None:
+    iran = _simple_watchlist("iran_war_risk", ["Iran"], ["war"], event=["strike"])
+
+    signal = classify_signal(_rss_item("US Army awards L3Harris anti-drone contract"), iran)
+
+    assert signal["signal_class"] == "noise"
+    assert "missing Iran/Gulf/proxy context" in signal["reject_reason"]
+    assert signal["signal_class"] not in {"high_signal", "medium_signal"}
+
+
+def test_iran_war_risk_rejects_zaporizhzhia_nuclear_plant_headline() -> None:
+    iran = _simple_watchlist("iran_war_risk", ["Iran"], ["war"], event=["strike"])
+
+    signal = classify_signal(_rss_item("Ukraine: Zaporizhzhia nuclear plant loses power"), iran)
+
+    assert signal["signal_class"] == "noise"
+    assert "missing Iran/Gulf/proxy context" in signal["reject_reason"]
+    assert "missing war/escalation core term" in signal["reject_reason"]
+
+
+def test_iran_war_risk_accepts_direct_iran_escalation() -> None:
+    iran = _simple_watchlist("iran_war_risk", ["Iran"], ["war"], event=["strike"])
+
+    signal = classify_signal(_rss_item("US launches strikes on Iran after drone attack on Gulf base"), iran)
+
+    assert signal["signal_class"] == "high_signal"
+
+
+def test_iran_war_risk_accepts_hormuz_tanker_escalation() -> None:
+    iran = _simple_watchlist("iran_war_risk", ["Iran"], ["war"], event=["strike"])
+
+    signal = classify_signal(_rss_item("Iran threatens Strait of Hormuz after US strikes"), iran)
+
+    assert signal["signal_class"] == "high_signal"
+
+
 def test_iran_inflation_ecb_headline_routes_primary_to_global_trade_secondary_iran() -> None:
     iran = _simple_watchlist("iran_war_risk", ["Iran", "US"], ["war"])
     trade = _simple_watchlist("global_trade_and_country_flows", ["Iran", "ECB", "eurozone"], ["inflation", "rates", "interest rates"])
@@ -894,6 +1071,75 @@ def test_generic_defense_tech_not_promoted_as_europe_war_prep() -> None:
 
     assert signal["signal_class"] in {"noise", "low_signal"}
     assert signal["signal_class"] not in {"high_signal", "medium_signal"}
+
+
+def test_europe_war_prep_rejects_ai_article() -> None:
+    signal = classify_signal(_rss_item("Anthropic releases a less-powerful version of its AI model"), _watchlist())
+
+    assert signal["signal_class"] == "noise"
+    assert "no Europe/NATO/member-state context" in signal["reject_reason"]
+
+
+def test_europe_war_prep_rejects_generic_cyber_article() -> None:
+    signal = classify_signal(_rss_item("New hacking tool released for enterprise security teams"), _watchlist())
+
+    assert signal["signal_class"] == "noise"
+    assert "no Europe/NATO/member-state context" in signal["reject_reason"]
+
+
+def test_europe_war_prep_rejects_generic_defense_tech_without_europe_context() -> None:
+    signal = classify_signal(_rss_item("Company showcases new counter-drone laser system"), _watchlist())
+
+    assert signal["signal_class"] == "noise"
+    assert "no Europe/NATO/member-state context" in signal["reject_reason"]
+
+
+def test_europe_war_prep_rejects_unrelated_title_with_defense_terms_only_in_summary() -> None:
+    signal = classify_signal(
+        _rss_item(
+            "Australia news live: Three major banks predict interest rates to fall next year",
+            summary="Richard Marles discusses AUKUS submarine defence and NATO meetings.",
+        ),
+        _watchlist(),
+    )
+
+    assert signal["signal_class"] == "noise"
+    assert "headline no Europe/NATO/member-state context" in signal["reject_reason"]
+
+
+def test_iran_war_risk_rejects_unrelated_title_with_iran_terms_only_in_summary() -> None:
+    iran = _simple_watchlist("iran_war_risk", ["Iran"], ["war"], event=["strike"])
+
+    signal = classify_signal(
+        _rss_item(
+            "Markets open higher as investors await central bank decision",
+            summary="Iran and US forces traded strikes near the Strait of Hormuz.",
+        ),
+        iran,
+    )
+
+    assert signal["signal_class"] == "noise"
+    assert "headline missing Iran/Gulf/proxy context" in signal["reject_reason"]
+
+
+def test_europe_war_prep_accepts_german_spanish_fcas_headline() -> None:
+    signal = classify_signal(_rss_item("Germany and Spain push FCAS fighter jet program forward"), _watchlist())
+
+    assert signal["signal_class"] in {"medium_signal", "high_signal"}
+    assert signal["signal_class"] != "low_signal"
+
+
+def test_europe_war_prep_accepts_uk_defense_procurement_headline() -> None:
+    signal = classify_signal(_rss_item("UK defence minister announces new air defense procurement package"), _watchlist())
+
+    assert signal["signal_class"] in {"medium_signal", "high_signal"}
+    assert signal["signal_class"] != "low_signal"
+
+
+def test_europe_war_prep_accepts_nato_deployment_headline() -> None:
+    signal = classify_signal(_rss_item("NATO deploys additional troops to Eastern Europe amid Russia threat"), _watchlist())
+
+    assert signal["signal_class"] == "high_signal"
 
 
 def test_europe_procurement_headline_routes_primary_to_europe_war_prep() -> None:
