@@ -42,6 +42,9 @@ id_ed25519
 # Logs
 *.log
 
+# Generated reports (local news scan output)
+reports/
+
 # OS/cache/temp
 .DS_Store
 cache/

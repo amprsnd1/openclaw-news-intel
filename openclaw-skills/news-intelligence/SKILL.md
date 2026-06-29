@@ -199,5 +199,37 @@ When generating a research briefing, use this structure:
 ## What to Monitor Next
 - ...
 ```
+## Scheduled Morning Briefing Reliability
+
+For cron/scheduled briefings, the local news collection is separated from AI summarization.
+
+### Workflow
+
+1. **Run the local scan script first:**
+   ```bash
+   bash <repo>/scripts/run_morning_scan.sh
+   ```
+   This saves the raw markdown report to:
+   - `<repo>/reports/morning/latest.md` (always current)
+   - `<repo>/reports/morning/YYYY-MM-DD.md` (dated archive)
+
+2. **Then summarize the saved file** — read `latest.md` and produce the briefing.
+
+3. **If AI summarization fails with `FailoverError` or provider overload:**
+   - Do NOT rerun `news-intel morning-scan`.
+   - The raw report is already saved.
+   - Report the fallback message and the path to `latest.md`.
+
+4. **If the local scan script itself fails** (non-zero exit):
+   - Check `<repo>/reports/morning/latest-error.log`.
+   - Report the failure and the error log path.
+
+### Rules for scheduled briefings
+
+- Do not rerun `news-intel morning-scan` repeatedly during provider overload.
+- News collection and AI summarization are independent steps — only the summarization step needs retries.
+- If the raw report exists, a later retry can summarize it without re-collecting.
+- Retry cron jobs fire at 11:20 AM and 11:45 AM Warsaw time to handle provider overload.
+
 ## Safety note
 Never attempt to bypass publisher restrictions. If a source is paywalled, restricted, unavailable, or metadata-only, clearly say so.

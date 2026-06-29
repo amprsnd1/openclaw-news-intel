@@ -47,6 +47,22 @@ Common exit `2` cases are recent GDELT HTTP 429, Fundus unavailable, OpenClaw sk
 
 Use scan for headlines, alerts, quick monitoring, and early signal detection. Use collect/enrich/digest for deeper research and weekly review.
 
+## Scheduled Morning Briefing Cron
+
+Use `scripts/run_morning_scan.sh` as the deterministic first step for scheduled briefings. It runs `news-intel morning-scan` and writes:
+
+- `reports/morning/latest.md`
+- `reports/morning/YYYY-MM-DD.md`
+- `reports/morning/latest-error.log` only on scan failure
+
+Recommended cron structure:
+
+1. Primary job: run `bash <repo>/scripts/run_morning_scan.sh`, then have OpenClaw summarize `reports/morning/latest.md`.
+2. Retry jobs: summarize the existing `reports/morning/latest.md` only; do not rerun collection during AI provider overload.
+3. If OpenClaw fails with `FailoverError`, report that raw scan output is already saved and retry summarization later.
+
+This separates local collection from AI summarization. Provider overload can still affect the Telegram summary, but it should not erase or block the raw local briefing.
+
 ## Strategic Digest Runs (Advanced)
 
 Use this after a signal appears or for a weekly/deep research briefing. It is not the default morning workflow.

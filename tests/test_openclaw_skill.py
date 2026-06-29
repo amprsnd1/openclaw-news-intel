@@ -11,6 +11,9 @@ def test_openclaw_skill_includes_collect_and_enrich_commands() -> None:
     assert "`<repo>`" in text
     assert "`<repo>/.venv/bin/news-intel`" in text
     assert LOCAL_REPO_PATH not in text
+    assert "## Scheduled Morning Briefing Reliability" in text
+    assert "bash <repo>/scripts/run_morning_scan.sh" in text
+    assert "<repo>/reports/morning/latest.md" in text
     assert 'news-intel scan --all-watchlists --since "<window>" --min-confidence medium --group-by-primary' in text
     assert 'news-intel scan --all-watchlists --since "<window>" --min-confidence medium --group-by-primary --fresh' in text
     assert 'news-intel scan --all-watchlists --since "<window>" --min-confidence medium --primary-only' in text
