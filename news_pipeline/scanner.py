@@ -1310,6 +1310,7 @@ def run_scan(
     signals: List[Dict[str, Any]] = []
     rejected: List[Dict[str, Any]] = []
     rejected_total = 0
+    seen_suppressed = 0
     reject_reason_counts: Dict[str, int] = {}
     threshold = MIN_CONFIDENCE_RANK.get(min_confidence, 1)
     for candidate in candidates:
@@ -1356,6 +1357,7 @@ def run_scan(
                 rejected.append(candidate)
             continue
         if only_new and not show_seen and candidate.get("id") in seen_ids:
+            seen_suppressed += 1
             continue
         signals.append(candidate)
 
@@ -1394,7 +1396,8 @@ def run_scan(
         "rejected_count": rejected_total,
         "reject_reason_counts": reject_reason_counts,
         "source_diversity_note": source_diversity_note(topic_name, selected_high),
-        "seen_hidden": max(0, len(signals) - len(selected)),
+        "seen_suppressed": seen_suppressed,
+        "seen_hidden": seen_suppressed,
     }
 
 
@@ -1624,6 +1627,7 @@ def render_all_watchlists_scan_markdown(result: Dict[str, Any]) -> str:
                 f"- Shown signals after routing: {diagnostics.get('shown_signals_after_routing', len(signals))}",
                 f"- Clusters found: {len(clusters)}",
                 f"- Suppressed duplicates: {diagnostics.get('suppressed_duplicates', 0)}",
+                f"- Hidden by seen-state: {diagnostics.get('suppressed_seen', 0)}",
                 f"- Rejected by hard gates: {diagnostics.get('rejected_by_hard_gates', 0)}",
             ]
         )

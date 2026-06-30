@@ -1317,12 +1317,39 @@ def test_morning_scan_runs_fresh_ingest_and_all_watchlists(monkeypatch, capsys, 
     assert "Primary topic: ukraine_financing" in out
 
 
+def test_morning_scan_repeats_current_signals_even_after_seen_state(monkeypatch, capsys, temp_db_env: Path) -> None:
+    monkeypatch.setattr(
+        "news_pipeline.cli._run_ingest",
+        lambda *args, **kwargs: {"mode": "rss", "inserted": 1, "skipped": 0, "matched": 1, "warnings": []},
+    )
+    monkeypatch.setattr("news_pipeline.scanner.fetch_rss", lambda source_cfg, max_items=50: [_rss_item("Ukraine secures IMF loan tranche for budget support")])
+    monkeypatch.setattr("news_pipeline.scanner.feedparser.parse", lambda url, **kwargs: type("Feed", (), {"entries": []})())
+
+    args = argparse.Namespace(
+        since="24h",
+        min_confidence="medium",
+        max_items=200,
+        show_rejected=False,
+        show_seen=False,
+        source="rss",
+    )
+
+    assert cmd_morning_scan(args) == 0
+    first = capsys.readouterr().out
+    assert "Primary topic: ukraine_financing" in first
+
+    assert cmd_morning_scan(args) == 0
+    second = capsys.readouterr().out
+    assert "Primary topic: ukraine_financing" in second
+
+
 def test_morning_scan_passes_show_rejected_and_show_seen(monkeypatch, temp_db_env: Path) -> None:
     captured = {}
 
     def fake_cmd_scan(args):
         captured["show_rejected"] = args.show_rejected
         captured["show_seen"] = args.show_seen
+        captured["only_new"] = args.only_new
         captured["fresh"] = args.fresh
         captured["all_watchlists"] = args.all_watchlists
         return 0
@@ -1341,4 +1368,4 @@ def test_morning_scan_passes_show_rejected_and_show_seen(monkeypatch, temp_db_en
     )
 
     assert rc == 0
-    assert captured == {"show_rejected": True, "show_seen": True, "fresh": True, "all_watchlists": True}
+    assert captured == {"show_rejected": True, "show_seen": True, "only_new": False, "fresh": True, "all_watchlists": True}

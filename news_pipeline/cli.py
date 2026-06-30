@@ -259,6 +259,7 @@ def cmd_scan(args: argparse.Namespace) -> int:
         new_items_scanned = 0
         candidate_matches_before_routing = 0
         suppressed_duplicates = 0
+        suppressed_seen = 0
         rejected_by_hard_gates = 0
         reject_reason_counts: Dict[str, int] = {}
         diversity_notes: List[str] = []
@@ -299,6 +300,7 @@ def cmd_scan(args: argparse.Namespace) -> int:
                     signals.append(row)
                 combined_signals.extend(signals)
                 combined_rejected.extend(result.get("rejected") or [])
+                suppressed_seen += int(result.get("seen_suppressed") or result.get("seen_hidden") or 0)
                 rejected_by_hard_gates += int(result.get("rejected_count") or 0)
                 for reason, count in (result.get("reject_reason_counts") or {}).items():
                     reject_reason_counts[reason] = reject_reason_counts.get(reason, 0) + int(count)
@@ -374,6 +376,7 @@ def cmd_scan(args: argparse.Namespace) -> int:
                 "candidate_matches_before_routing": candidate_matches_before_routing,
                 "shown_signals_after_routing": len(final_signals),
                 "suppressed_duplicates": suppressed_duplicates,
+                "suppressed_seen": suppressed_seen,
                 "rejected_by_hard_gates": rejected_by_hard_gates,
                 "top_reject_reasons": sorted(reject_reason_counts.items(), key=lambda item: item[1], reverse=True)[:5],
             },
@@ -436,8 +439,11 @@ def cmd_morning_scan(args: argparse.Namespace) -> int:
         max_items=50,
         source=args.source,
         min_confidence=args.min_confidence,
-        only_new=True,
-        show_seen=args.show_seen,
+        # Morning scan is a daily situation snapshot, not an alert de-dupe pass.
+        # If seen-state hides prior scan results, retry/scheduled briefings can
+        # incorrectly report "zero signals" even while current signals exist.
+        only_new=False,
+        show_seen=True,
         show_rejected=args.show_rejected,
         primary_only=False,
         group_by_primary=True,
